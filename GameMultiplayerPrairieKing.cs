@@ -2912,6 +2912,7 @@ namespace MultiPlayerPrairie
 			if (scrollingMap)
 			{
 				newMapPosition -= TileSize / 8;
+
 				playerPosition.Y -= TileSize / 8;
 				playerPosition.Y += 3f;
 				playerBoundingBox.X = (int)playerPosition.X + TileSize / 4;
@@ -2921,6 +2922,17 @@ namespace MultiPlayerPrairie
 				playerMovementDirections = new List<int>{2};
 				playerMotionAnimationTimer += time.ElapsedGameTime.Milliseconds;
 				playerMotionAnimationTimer %= 400f;
+
+
+				player2Position.Y -= TileSize / 8;
+				player2Position.Y += 3f;
+				player2BoundingBox.X = (int)playerPosition.X + TileSize / 4;
+				player2BoundingBox.Y = (int)playerPosition.Y + TileSize / 4;
+				player2BoundingBox.Width = TileSize / 2;
+				player2BoundingBox.Height = TileSize / 2;
+				player2MovementDirections = new List<int> { 2 };
+
+
 				if (newMapPosition <= 0)
 				{
 					scrollingMap = false;
