@@ -299,12 +299,27 @@ namespace MultiPlayerPrairie
                 case "PK_BulletSpawn":
                     PK_BulletSpawn mBulletSpawn = e.ReadAs<PK_BulletSpawn>();
                     Bullet bullet = new(PK_game, mBulletSpawn.position, mBulletSpawn.motion, mBulletSpawn.damage);
+                    bullet.id = mBulletSpawn.id;
 
                     if (mBulletSpawn.isFriendly)
                         PK_game.bullets.Add(bullet);
                     else
                         PK_game.enemyBullets.Add(bullet);
 
+                    break;
+
+                case "PK_BulletDespawned":
+                    PK_BulletDespawned mBulletDespawned = e.ReadAs<PK_BulletDespawned>();
+
+                    List<Bullet> bulletList = mBulletDespawned.isFriendly ? PK_game.bullets : PK_game.enemyBullets;
+                    //Remove the killed monster
+                    for (int i = bulletList.Count - 1; i >= 0; i--)
+                    {
+                        if (bulletList[i].id == mBulletDespawned.id)
+                        {
+                            bulletList.RemoveAt(i);
+                        }
+                    }
                     break;
 
                 case "PK_EnemySpawn":
@@ -370,20 +385,6 @@ namespace MultiPlayerPrairie
                             PK_game.monsters.RemoveAt(i);
                             PK_game.AddGuts(m.position.Location, m.type);
                             Game1.playSound("Cowboy_monsterDie");
-                        }
-                    }
-                    break;
-
-                case "PK_BulletDespawned":
-                    PK_BulletDespawned mBulletDespawned = e.ReadAs<PK_BulletDespawned>();
-
-                    List<Bullet> bulletList = mBulletDespawned.isFriendly ? PK_game.bullets : PK_game.enemyBullets;
-                    //Remove the killed monster
-                    for (int i = bulletList.Count - 1; i >= 0; i--)
-                    {
-                        if (bulletList[i].id == mBulletDespawned.id)
-                        {
-                            bulletList.RemoveAt(i);
                         }
                     }
                     break;

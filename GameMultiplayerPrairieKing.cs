@@ -938,10 +938,22 @@ namespace MultiPlayerPrairie
 				bullets[m].position.Y += bullets[m].motion.Y;
 				if (bullets[m].position.X <= 0 || bullets[m].position.Y <= 0 || bullets[m].position.X >= 768 || bullets[m].position.Y >= 768)
 				{
+					//NET Despawn Bullet
+					PK_BulletDespawned mBulletDespawned = new();
+					mBulletDespawned.id = bullets[m].id;
+					mBulletDespawned.isFriendly = true;
+					modInstance.Helper.Multiplayer.SendMessage(mBulletDespawned, "PK_BulletDespawned");
+
 					bullets.RemoveAt(m);
 				}
 				else if (map[bullets[m].position.X / 16 / 3, bullets[m].position.Y / 16 / 3] == 7)
 				{
+					//NET Despawn Bullet
+					PK_BulletDespawned mBulletDespawned = new();
+					mBulletDespawned.id = bullets[m].id;
+					mBulletDespawned.isFriendly = true;
+					modInstance.Helper.Multiplayer.SendMessage(mBulletDespawned, "PK_BulletDespawned");
+
 					bullets.RemoveAt(m);
 				}
 				else
@@ -989,6 +1001,12 @@ namespace MultiPlayerPrairie
 							bullets[m].damage -= monsterhealth - monsterAfterDamageHealth;
 							if (bullets[m].damage <= 0)
 							{
+								//NET Despawn Bullet
+								PK_BulletDespawned mBulletDespawned = new();
+								mBulletDespawned.id = bullets[m].id;
+								mBulletDespawned.isFriendly = true;
+								modInstance.Helper.Multiplayer.SendMessage(mBulletDespawned, "PK_BulletDespawned");
+
 								bullets.RemoveAt(m);
 							}
 							break;
@@ -1006,10 +1024,22 @@ namespace MultiPlayerPrairie
 					enemyBullets[l].position.Y += enemyBullets[l].motion.Y;
 					if (enemyBullets[l].position.X <= 0 || enemyBullets[l].position.Y <= 0 || enemyBullets[l].position.X >= 762 || enemyBullets[l].position.Y >= 762)
 					{
+						//NET Despawn Bullet
+						PK_BulletDespawned mBulletDespawned = new();
+						mBulletDespawned.id = enemyBullets[l].id;
+						mBulletDespawned.isFriendly = false;
+						modInstance.Helper.Multiplayer.SendMessage(mBulletDespawned, "PK_BulletDespawned");
+
 						enemyBullets.RemoveAt(l);
 					}
 					else if (map[(enemyBullets[l].position.X + 6) / 16 / 3, (enemyBullets[l].position.Y + 6) / 16 / 3] == 7)
 					{
+						//NET Despawn Bullet
+						PK_BulletDespawned mBulletDespawned = new();
+						mBulletDespawned.id = enemyBullets[l].id;
+						mBulletDespawned.isFriendly = false;
+						modInstance.Helper.Multiplayer.SendMessage(mBulletDespawned, "PK_BulletDespawned");
+
 						enemyBullets.RemoveAt(l);
 					}
 					else if (playerInvincibleTimer <= 0 && deathTimer <= 0f && playerBoundingBox.Intersects(new Rectangle(enemyBullets[l].position.X, enemyBullets[l].position.Y, 15, 15)))
