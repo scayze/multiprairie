@@ -3088,12 +3088,17 @@ namespace MultiPlayerPrairie
 					{
 						noPickUpBox.Location = new Point(0, 0);
 					}
-					if (waitingForPlayerToMoveDownAMap && playerBoundingBox.Bottom >= 16 * TileSize - TileSize / 2)
-					{
-						PK_StartLevelTransition message = new();
-						modInstance.Helper.Multiplayer.SendMessage(message, "PK_StartLevelTransition");
 
-						StartLevelTransition();
+					if (waitingForPlayerToMoveDownAMap && isHost)
+					{
+						float bottomBorder = 16 * TileSize - TileSize / 2;
+						if(playerBoundingBox.Bottom >= bottomBorder && player2BoundingBox.Bottom >= bottomBorder)
+                        {
+							PK_StartLevelTransition message = new();
+							modInstance.Helper.Multiplayer.SendMessage(message, "PK_StartLevelTransition");
+
+							StartLevelTransition();
+						}
 					}
 					if (!shoppingCarpetNoPickup.Intersects(playerBoundingBox))
 					{
