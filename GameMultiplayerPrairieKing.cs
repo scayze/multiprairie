@@ -1664,7 +1664,7 @@ namespace MultiPlayerPrairie
 		public List<int> playerMovementDirections = new();
 
 		public List<int> playerShootingDirections = new();
-
+		
 		public List<int> player2MovementDirections = new();
 
 		public List<int> player2ShootingDirections = new();
@@ -1845,8 +1845,6 @@ namespace MultiPlayerPrairie
 		protected Dictionary<GameKeys, int> _buttonHeldFrames;
 
 		private int player2FootstepSoundTimer;
-
-		public CowboyMonster targetMonster;
 
 		public static int TileSize => 48;
 
@@ -4408,23 +4406,6 @@ namespace MultiPlayerPrairie
 			return false;
 		}
 
-		/*
-		private void addPlayer2MovementDirection(int direction)
-		{
-			if (!player2MovementDirections.Contains(direction))
-			{
-				if (player2MovementDirections.Count == 1 && direction == (player2MovementDirections[0] + 2) % 4)
-				{
-					player2MovementDirections.Clear();
-				}
-				player2MovementDirections.Add(direction);
-				if (player2MovementDirections.Count > 2)
-				{
-					player2MovementDirections.RemoveAt(0);
-				}
-			}
-		}
-		*/
 
 		private void AddPlayerMovementDirection(int direction)
 		{
@@ -4437,24 +4418,6 @@ namespace MultiPlayerPrairie
 				playerMovementDirections.Add(direction);
 			}
 		}
-
-		/*
-		private void addPlayer2ShootingDirection(int direction)
-		{
-			if (!player2ShootingDirections.Contains(direction))
-			{
-				if (player2ShootingDirections.Count == 1 && direction == (player2ShootingDirections[0] + 2) % 4)
-				{
-					player2ShootingDirections.Clear();
-				}
-				player2ShootingDirections.Add(direction);
-				if (player2ShootingDirections.Count > 2)
-				{
-					player2ShootingDirections.RemoveAt(0);
-				}
-			}
-		}
-		*/
 
 		private void AddPlayerShootingDirection(int direction)
 		{
