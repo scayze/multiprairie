@@ -2,6 +2,8 @@
 using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using MultiplayerPrairieKing.Entities;
+using MultiplayerPrairieKing.Entities.Enemies;
 using StardewValley;
 using StardewValley.Minigames;
 using System;
@@ -33,56 +35,6 @@ namespace MultiPlayerPrairie
 			MAX
 		}
 
-
-
-		public class CowboyPowerup
-		{
-			public GameMultiplayerPrairieKing gameInstance;
-
-			public long id;
-
-			public POWERUP_TYPE which;
-
-			public Point position;
-
-			public int duration;
-
-			public float yOffset;
-
-			public CowboyPowerup(GameMultiplayerPrairieKing game, POWERUP_TYPE which, Point position, int duration)
-			{
-				this.gameInstance = game;
-				
-				this.which = which;
-				this.position = position;
-				this.duration = duration;
-
-				//NET PowerupSpawn
-				if (!gameInstance.isHost) return;
-				//in cases where the player is *given* an item, and he doesnt pick it up, position will be Zero.
-				//we do *not* want this synced
-				if(position == Point.Zero) return;
-
-				this.id = gameInstance.modInstance.Helper.Multiplayer.GetNewID();
-
-				PK_PowerupSpawn mPowerup = new();
-				mPowerup.id = this.id = gameInstance.modInstance.Helper.Multiplayer.GetNewID();
-				mPowerup.which = (int)this.which;
-				mPowerup.position = this.position;
-				mPowerup.duration = this.duration;
-
-				gameInstance.modInstance.Helper.Multiplayer.SendMessage(mPowerup, "PK_PowerupSpawn");
-			}
-
-			public void Draw(SpriteBatch b)
-			{
-				if (duration > 2000 || duration / 200 % 2 == 0)
-				{
-					b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(position.X, (float)position.Y + yOffset), new Rectangle(272 + (int)which * 16, 1808, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, (float)position.Y / 10000f + 0.001f);
-				}
-			}
-		}
-
 		public void NETskipLevel()
         {
 			//Cant skip level as non host, i think
@@ -91,7 +43,7 @@ namespace MultiPlayerPrairie
 				return;
             }
 
-			foreach (CowboyMonster monster in monsters)
+			foreach (Enemy monster in monsters)
             {
 				PK_EnemyKilled enemyKilled = new();
 				enemyKilled.id = monster.id;
@@ -108,7 +60,7 @@ namespace MultiPlayerPrairie
 
 		public void NETspawnBullet(bool friendly, Point position, Point motion, int damage)
 		{
-			CowboyBullet bullet = new(this, position, motion, damage);
+			Bullet bullet = new(this, position, motion, damage);
 
 			if (friendly)
 				bullets.Add(bullet);
@@ -128,7 +80,7 @@ namespace MultiPlayerPrairie
 
 		public void NETspawnBullet(bool friendly, Point position, int direction, int damage)
 		{
-			CowboyBullet bullet = new(this, position, direction, damage);
+			Bullet bullet = new(this, position, direction, damage);
 
 			if (friendly)
 				bullets.Add(bullet);
@@ -156,1341 +108,6 @@ namespace MultiPlayerPrairie
 			modInstance.Helper.Multiplayer.SendMessage(message, "PK_PlayerMove");
         }
 
-		public class CowboyBullet
-		{
-			public long id;
-
-			public GameMultiplayerPrairieKing gameInstance;
-
-			public Point position;
-
-			public Point motion;
-
-			public int damage;
-
-
-			public CowboyBullet(GameMultiplayerPrairieKing game, Point position, Point motion, int damage)
-			{
-				this.gameInstance = game;
-				this.id = gameInstance.modInstance.Helper.Multiplayer.GetNewID();
-
-				this.position = position;
-				this.motion = motion;
-				this.damage = damage;
-			}
-
-			public CowboyBullet(GameMultiplayerPrairieKing game, Point position, int direction, int damage)
-			{
-				this.gameInstance = game;
-				this.id = gameInstance.modInstance.Helper.Multiplayer.GetNewID();
-
-				this.position = position;
-				switch (direction)
-				{
-					case 0:
-						motion = new Point(0, -8);
-						break;
-					case 1:
-						motion = new Point(8, 0);
-						break;
-					case 2:
-						motion = new Point(0, 8);
-						break;
-					case 3:
-						motion = new Point(-8, 0);
-						break;
-				}
-				this.damage = damage;
-			}
-		}
-
-		public class CowboyMonster
-		{
-			public GameMultiplayerPrairieKing gameInstance;
-
-			public long id;
-
-			public const int MonsterAnimationDelay = 500;
-
-			public int health;
-
-			public MONSTER_TYPE type;
-
-			public int speed;
-
-			public float movementAnimationTimer;
-
-			public Rectangle position;
-
-			public int movementDirection;
-
-			public bool movedLastTurn;
-
-			public bool oppositeMotionGuy;
-
-			public bool invisible;
-
-			public bool special;
-
-			public bool uninterested;
-
-			public bool flyer;
-
-			public Color tint = Color.White;
-
-			public Color flashColor = Color.Red;
-
-			public float flashColorTimer;
-
-			public int ticksSinceLastMovement;
-
-			public Vector2 acceleration;
-
-			private Point targetPosition;
-
-
-			/*public CowboyMonster(GameMultiplayerPrairieKing game, int which, int health, int speed, Point position)
-			{
-				this.gameInstance = game;
-				this.health = health;
-				type = which;
-				this.speed = speed;
-				this.position = new Rectangle(position.X, position.Y, TileSize, TileSize);
-				uninterested = (Game1.random.NextDouble() < 0.25);
-			}*/
-
-			public CowboyMonster(GameMultiplayerPrairieKing game, MONSTER_TYPE which, Point position)
-			{
-				this.gameInstance = game;
-				
-
-				type = which;
-				this.position = new Rectangle(position.X, position.Y, TileSize, TileSize);
-				switch (type)
-				{
-					case MONSTER_TYPE.orc:
-						speed = 2;
-						health = 1;
-						uninterested = (Game1.random.NextDouble() < 0.25);
-						if (uninterested)
-						{
-							targetPosition = new Point(Game1.random.Next(2, 14) * TileSize, Game1.random.Next(2, 14) * TileSize);
-						}
-						break;
-					case MONSTER_TYPE.ogre:
-						speed = 1;
-						health = 3;
-						break;
-					case MONSTER_TYPE.mushroom:
-						speed = 3;
-						health = 2;
-						break;
-					case MONSTER_TYPE.ghost:
-						speed = 2;
-						health = 1;
-						flyer = true;
-						break;
-					case MONSTER_TYPE.mummy:
-						health = 6;
-						speed = 1;
-						uninterested = (Game1.random.NextDouble() < 0.25);
-						if (uninterested)
-						{
-							targetPosition = new Point(Game1.random.Next(2, 14) * TileSize, Game1.random.Next(2, 14) * TileSize);
-						}
-						break;
-					case MONSTER_TYPE.devil:
-						health = 3;
-						speed = 3;
-						flyer = true;
-						break;
-					case MONSTER_TYPE.spikey:
-						{
-							speed = 3;
-							health = 2;
-							int tries = 0;
-							do
-							{
-								targetPosition = new Point(Game1.random.Next(2, 14) * TileSize, Game1.random.Next(2, 14) * TileSize);
-								tries++;
-							}
-							while (gameInstance.IsCollidingWithMap(targetPosition) && tries < 10);
-							break;
-						}
-				}
-				oppositeMotionGuy = (Game1.random.NextDouble() < 0.5);
-
-
-				//NET spawn outlaw
-				if(gameInstance.isHost)
-                {
-					this.id = gameInstance.modInstance.Helper.Multiplayer.GetNewID();
-
-					PK_EnemySpawn message = new();
-					message.id = this.id;
-					message.which = (int)which;
-					message.position = position;
-					message.isDracula = (which == MONSTER_TYPE.dracula);
-					message.isOutlaw = (which == MONSTER_TYPE.outlaw);
-					game.modInstance.Helper.Multiplayer.SendMessage(message, "PK_EnemySpawn");
-				}
-			}
-
-			public virtual void Draw(SpriteBatch b)
-			{
-				if (type == MONSTER_TYPE.spikey && special)
-				{
-					if (flashColorTimer > 0f)
-					{
-						b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(position.X, position.Y), new Rectangle(480, 1696, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, (float)position.Y / 10000f + 0.001f);
-					}
-					else
-					{
-						b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(position.X, position.Y), new Rectangle(576, 1712, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, (float)position.Y / 10000f + 0.001f);
-					}
-				}
-				else if (!invisible)
-				{
-					if (flashColorTimer > 0f)
-					{
-						b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(position.X, position.Y), new Rectangle(352 + (int)type * 16, 1696, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, (float)position.Y / 10000f + 0.001f);
-					}
-					else
-					{
-						b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(position.X, position.Y), new Rectangle(352 + ((int)type * 2 + ((movementAnimationTimer < 250f) ? 1 : 0)) * 16, 1712, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, (float)position.Y / 10000f + 0.001f);
-					}
-					if (gameInstance.monsterConfusionTimer > 0)
-					{
-						b.DrawString(Game1.smallFont, "?", topLeftScreenCoordinate + new Vector2((float)(position.X + TileSize / 2) - Game1.smallFont.MeasureString("?").X / 2f, position.Y - TileSize / 2), new Color(88, 29, 43), 0f, Vector2.Zero, 1f, SpriteEffects.None, (float)position.Y / 10000f);
-						b.DrawString(Game1.smallFont, "?", topLeftScreenCoordinate + new Vector2((float)(position.X + TileSize / 2) - Game1.smallFont.MeasureString("?").X / 2f + 1f, position.Y - TileSize / 2), new Color(88, 29, 43), 0f, Vector2.Zero, 1f, SpriteEffects.None, (float)position.Y / 10000f);
-						b.DrawString(Game1.smallFont, "?", topLeftScreenCoordinate + new Vector2((float)(position.X + TileSize / 2) - Game1.smallFont.MeasureString("?").X / 2f - 1f, position.Y - TileSize / 2), new Color(88, 29, 43), 0f, Vector2.Zero, 1f, SpriteEffects.None, (float)position.Y / 10000f);
-					}
-				}
-			}
-
-			public virtual bool TakeDamage(int damage)
-			{
-				health -= damage;
-				health = Math.Max(0, health);
-				if (health <= 0)
-				{
-					return true;
-				}
-				Game1.playSound("cowboy_monsterhit");
-				flashColor = Color.Red;
-				flashColorTimer = 100f;
-				return false;
-			}
-
-			public virtual POWERUP_TYPE GetLootDrop()
-			{
-				if (type == MONSTER_TYPE.spikey && special)
-				{
-					return POWERUP_TYPE.LOG;
-				}
-				if (Game1.random.NextDouble() < 0.05)
-				{
-					if (type != 0 && Game1.random.NextDouble() < 0.1)
-					{
-						return POWERUP_TYPE.NICKEL;
-					}
-					if (Game1.random.NextDouble() < 0.01)
-					{
-						return POWERUP_TYPE.NICKEL;
-					}
-					return POWERUP_TYPE.COIN;
-				}
-				if (Game1.random.NextDouble() < 0.05)
-				{
-					if (Game1.random.NextDouble() < 0.15)
-					{
-						return (POWERUP_TYPE)Game1.random.Next(6, 8);
-					}
-					if (Game1.random.NextDouble() < 0.07)
-					{
-						return POWERUP_TYPE.SHERRIFF;
-					}
-
-					int loot = Game1.random.Next(2, 10);
-					if (loot == 5 && Game1.random.NextDouble() < 0.4)
-					{
-						loot = Game1.random.Next(2, 10);
-					}
-					return (POWERUP_TYPE)loot;
-				}
-				return POWERUP_TYPE.LOG;
-			}
-
-			public virtual bool Move(Vector2 playerPosition, GameTime time)
-			{
-				movementAnimationTimer -= time.ElapsedGameTime.Milliseconds;
-				if (movementAnimationTimer <= 0f)
-				{
-					movementAnimationTimer = Math.Max(100, 500 - speed * 50);
-				}
-				if (flashColorTimer > 0f)
-				{
-					flashColorTimer -= time.ElapsedGameTime.Milliseconds;
-					return false;
-				}
-				if (gameInstance.monsterConfusionTimer > 0)
-				{
-					return false;
-				}
-				if (gameInstance.shopping)
-				{
-					gameInstance.shoppingTimer -= time.ElapsedGameTime.Milliseconds;
-					if (gameInstance.shoppingTimer <= 0)
-					{
-						gameInstance.shoppingTimer = 100;
-					}
-				}
-				ticksSinceLastMovement++;
-				switch (type)
-				{
-					case MONSTER_TYPE.orc:
-					case MONSTER_TYPE.ogre:
-					case MONSTER_TYPE.mummy:
-					case MONSTER_TYPE.mushroom:
-					case MONSTER_TYPE.spikey:
-						{
-							if (type == MONSTER_TYPE.spikey)
-							{
-								if (special || invisible)
-								{
-									break;
-								}
-								if (ticksSinceLastMovement > 20)
-								{
-									int tries2 = 0;
-									do
-									{
-										targetPosition = new Point(Game1.random.Next(2, 14) * TileSize, Game1.random.Next(2, 14) * TileSize);
-										tries2++;
-									}
-									while (gameInstance.IsCollidingWithMap(targetPosition) && tries2 < 5);
-								}
-							}
-							else if (ticksSinceLastMovement > 20)
-							{
-								int tries = 0;
-								do
-								{
-									oppositeMotionGuy = !oppositeMotionGuy;
-									targetPosition = new Point(Game1.random.Next(position.X - TileSize * 2, position.X + TileSize * 2), Game1.random.Next(position.Y - TileSize * 2, position.Y + TileSize * 2));
-									tries++;
-								}
-								while (gameInstance.IsCollidingWithMap(targetPosition) && tries < 5);
-							}
-
-							Vector2 target2 = (!targetPosition.Equals(Point.Zero)) ? new Vector2(targetPosition.X, targetPosition.Y) : playerPosition;
-							if (gameInstance.playingWithAbigail && target2.Equals(playerPosition))
-							{
-								double distanceToPlayer = Math.Sqrt(Math.Pow((float)position.X - target2.X, 2.0) - Math.Pow((float)position.Y - target2.Y, 2.0));
-								if (Math.Sqrt(Math.Pow((float)position.X - gameInstance.player2Position.X, 2.0) - Math.Pow((float)position.Y - gameInstance.player2Position.Y, 2.0)) < distanceToPlayer)
-								{
-									target2 = gameInstance.player2Position;
-								}
-							}
-							if (gameInstance.gopherRunning)
-							{
-								target2 = new Vector2(gameInstance.gopherBox.X, gameInstance.gopherBox.Y);
-							}
-							if (Game1.random.NextDouble() < 0.001)
-							{
-								oppositeMotionGuy = !oppositeMotionGuy;
-							}
-							if ((type == MONSTER_TYPE.spikey && !oppositeMotionGuy) || Math.Abs(target2.X - (float)position.X) > Math.Abs(target2.Y - (float)position.Y))
-							{
-								if (target2.X + (float)speed < (float)position.X && (movedLastTurn || movementDirection != 3))
-								{
-									movementDirection = 3;
-								}
-								else if (target2.X > (float)(position.X + speed) && (movedLastTurn || movementDirection != 1))
-								{
-									movementDirection = 1;
-								}
-								else if (target2.Y > (float)(position.Y + speed) && (movedLastTurn || movementDirection != 2))
-								{
-									movementDirection = 2;
-								}
-								else if (target2.Y + (float)speed < (float)position.Y && (movedLastTurn || movementDirection != 0))
-								{
-									movementDirection = 0;
-								}
-							}
-							else if (target2.Y > (float)(position.Y + speed) && (movedLastTurn || movementDirection != 2))
-							{
-								movementDirection = 2;
-							}
-							else if (target2.Y + (float)speed < (float)position.Y && (movedLastTurn || movementDirection != 0))
-							{
-								movementDirection = 0;
-							}
-							else if (target2.X + (float)speed < (float)position.X && (movedLastTurn || movementDirection != 3))
-							{
-								movementDirection = 3;
-							}
-							else if (target2.X > (float)(position.X + speed) && (movedLastTurn || movementDirection != 1))
-							{
-								movementDirection = 1;
-							}
-							movedLastTurn = false;
-							Rectangle attemptedPosition = position;
-							switch (movementDirection)
-							{
-								case 0:
-									attemptedPosition.Y -= speed;
-									break;
-								case 1:
-									attemptedPosition.X += speed;
-									break;
-								case 2:
-									attemptedPosition.Y += speed;
-									break;
-								case 3:
-									attemptedPosition.X -= speed;
-									break;
-							}
-							if (gameInstance.zombieModeTimer > 0)
-							{
-								attemptedPosition.X = position.X - (attemptedPosition.X - position.X);
-								attemptedPosition.Y = position.Y - (attemptedPosition.Y - position.Y);
-							}
-
-							//Ogers stomp spikeys
-							if (type == MONSTER_TYPE.ogre)
-							{
-								for (int i = gameInstance.monsters.Count - 1; i >= 0; i--)
-								{
-									if (gameInstance.monsters[i].type == MONSTER_TYPE.spikey && gameInstance.monsters[i].special && gameInstance.monsters[i].position.Intersects(attemptedPosition))
-									{
-										//Net EnemyKilled
-										PK_EnemyKilled message = new();
-										message.id = gameInstance.monsters[i].id;
-										gameInstance.modInstance.Helper.Multiplayer.SendMessage(message, "PK_EnemyKilled");
-
-										gameInstance.AddGuts(gameInstance.monsters[i].position.Location, gameInstance.monsters[i].type);
-										Game1.playSound("Cowboy_monsterDie");
-										gameInstance.monsters.RemoveAt(i);
-									}
-								}
-							}
-							if (gameInstance.IsCollidingWithMapForMonsters(attemptedPosition) || gameInstance.IsCollidingWithMonster(attemptedPosition, this) || !(gameInstance.deathTimer <= 0f))
-							{
-								break;
-							}
-							ticksSinceLastMovement = 0;
-							position = attemptedPosition;
-							movedLastTurn = true;
-							if (!position.Contains((int)target2.X + TileSize / 2, (int)target2.Y + TileSize / 2))
-							{
-								break;
-							}
-							targetPosition = Point.Zero;
-							if ((type == MONSTER_TYPE.orc || type == MONSTER_TYPE.mummy) && uninterested)
-							{
-								targetPosition = new Point(Game1.random.Next(2, 14) * TileSize, Game1.random.Next(2, 14) * TileSize);
-								if (Game1.random.NextDouble() < 0.5)
-								{
-									uninterested = false;
-									targetPosition = Point.Zero;
-								}
-							}
-							if (type == MONSTER_TYPE.spikey && !invisible)
-							{
-								gameInstance.temporarySprites.Add(new TemporaryAnimatedSprite("LooseSprites\\Cursors", new Rectangle(352, 1728, 16, 16), 60f, 3, 0, new Vector2(position.X, position.Y) + topLeftScreenCoordinate, flicker: false, flipped: false, (float)position.Y / 10000f, 0f, Color.White, 3f, 0f, 0f, 0f, local: true)
-								{
-									endFunction = SpikeyEndBehavior
-								});
-								invisible = true;
-							}
-							break;
-						}
-					case MONSTER_TYPE.ghost:
-					case MONSTER_TYPE.devil:
-						{
-							if (ticksSinceLastMovement > 20)
-							{
-								int tries3 = 0;
-								do
-								{
-									oppositeMotionGuy = !oppositeMotionGuy;
-									targetPosition = new Point(Game1.random.Next(position.X - TileSize * 2, position.X + TileSize * 2), Game1.random.Next(position.Y - TileSize * 2, position.Y + TileSize * 2));
-									tries3++;
-								}
-								while (gameInstance.IsCollidingWithMap(targetPosition) && tries3 < 5);
-							}
-							_ = targetPosition;
-							Vector2 target2 = (!targetPosition.Equals(Point.Zero)) ? new Vector2(targetPosition.X, targetPosition.Y) : playerPosition;
-							Vector2 targetToFly = Utility.getVelocityTowardPoint(position.Location, target2 + new Vector2(TileSize / 2, TileSize / 2), speed);
-							float accelerationMultiplyer = (targetToFly.X != 0f && targetToFly.Y != 0f) ? 1.5f : 1f;
-							if (targetToFly.X > acceleration.X)
-							{
-								acceleration.X += 0.1f * accelerationMultiplyer;
-							}
-							if (targetToFly.X < acceleration.X)
-							{
-								acceleration.X -= 0.1f * accelerationMultiplyer;
-							}
-							if (targetToFly.Y > acceleration.Y)
-							{
-								acceleration.Y += 0.1f * accelerationMultiplyer;
-							}
-							if (targetToFly.Y < acceleration.Y)
-							{
-								acceleration.Y -= 0.1f * accelerationMultiplyer;
-							}
-							if (!gameInstance.IsCollidingWithMonster(new Rectangle(position.X + (int)Math.Ceiling(acceleration.X), position.Y + (int)Math.Ceiling(acceleration.Y), TileSize, TileSize), this) && gameInstance.deathTimer <= 0f)
-							{
-								ticksSinceLastMovement = 0;
-								position.X += (int)Math.Ceiling(acceleration.X);
-								position.Y += (int)Math.Ceiling(acceleration.Y);
-								if (position.Contains((int)target2.X + TileSize / 2, (int)target2.Y + TileSize / 2))
-								{
-									targetPosition = Point.Zero;
-								}
-							}
-							break;
-						}
-				}
-				return false;
-			}
-
-			public void SpikeyEndBehavior(int extraInfo)
-			{
-				invisible = false;
-				health += 5;
-				special = true;
-			}
-
-			public virtual void OnDeath()
-            {
-
-            }
-		}
-
-		public class Dracula : CowboyMonster
-		{
-			public const int gloatingPhase = -1;
-
-			public const int walkRandomlyAndShootPhase = 0;
-
-			public const int spreadShotPhase = 1;
-
-			public const int summonDemonPhase = 2;
-
-			public const int summonMummyPhase = 3;
-
-			public int phase = -1;
-
-			public int phaseInternalTimer;
-
-			public int phaseInternalCounter;
-
-			public int shootTimer;
-
-			public int fullHealth;
-
-			public Point homePosition;
-
-			public Dracula(GameMultiplayerPrairieKing game)
-				: base(game, MONSTER_TYPE.dracula, new Point(8 * TileSize, 8 * TileSize))
-			{
-				homePosition = position.Location;
-				position.Y += TileSize * 4;
-				health = 350;
-				fullHealth = health;
-				phase = -1;
-				phaseInternalTimer = 4000;
-				speed = 2;
-			}
-
-			public override void Draw(SpriteBatch b)
-			{
-				if (phase != -1)
-				{
-					b.Draw(Game1.staminaRect, new Rectangle((int)topLeftScreenCoordinate.X, (int)topLeftScreenCoordinate.Y + 16 * TileSize + 3, (int)((float)(16 * TileSize) * ((float)health / (float)fullHealth)), TileSize / 3), new Color(188, 51, 74));
-				}
-				if (flashColorTimer > 0f)
-				{
-					b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(position.X, position.Y), new Rectangle(464, 1696, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, (float)position.Y / 10000f);
-					return;
-				}
-				int num = phase;
-				if (num == -1 || (uint)(num - 1) <= 2u)
-				{
-					b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(position.X, position.Y), new Rectangle(592 + phaseInternalTimer / 100 % 3 * 16, 1760, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, (float)position.Y / 10000f);
-					if (phase == -1)
-					{
-						b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(position.X, (float)(position.Y + TileSize) + (float)Math.Sin((float)phaseInternalTimer / 1000f) * 3f), new Rectangle(528, 1776, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, (float)position.Y / 10000f);
-						b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(position.X - TileSize / 2, position.Y - TileSize * 2), new Rectangle(608, 1728, 32, 32), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, (float)position.Y / 10000f);
-					}
-				}
-				else
-				{
-					b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(position.X, position.Y), new Rectangle(592 + phaseInternalTimer / 100 % 2 * 16, 1712, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, (float)position.Y / 10000f);
-				}
-			}
-
-			public override POWERUP_TYPE GetLootDrop()
-			{
-				return POWERUP_TYPE.LOG;
-			}
-
-            public override void OnDeath()
-            {
-				//Play death sound
-				Game1.playSound("cowboy_explosion");
-
-				//Spawn heart on defeat
-				if (gameInstance.isHost)
-				{
-					gameInstance.powerups.Add(new CowboyPowerup(gameInstance, POWERUP_TYPE.HEART, new Point(8 * TileSize, 10 * TileSize), 9999999));
-				}
-
-				//???
-				gameInstance.noPickUpBox = new Rectangle(8 * TileSize, 10 * TileSize, TileSize, TileSize);
-
-				//Stop Boss song
-				if (outlawSong != null && outlawSong.IsPlaying)
-				{
-					outlawSong.Stop(AudioStopOptions.Immediate);
-				}
-
-				//Flash Screen
-				gameInstance.screenFlash = 200;
-
-				for (int j = 0; j < 30; j++)
-				{
-					gameInstance.temporarySprites.Add(new TemporaryAnimatedSprite("LooseSprites\\Cursors", new Rectangle(512, 1696, 16, 16), 70f, 6, 0, new Vector2(position.X + Game1.random.Next(-TileSize, TileSize), position.Y + Game1.random.Next(-TileSize, TileSize)) + topLeftScreenCoordinate + new Vector2(TileSize / 2, TileSize / 2), flicker: false, flipped: false, 1f, 0f, Color.White, 3f, 0f, 0f, 0f, local: true)
-					{
-						delayBeforeAnimationStart = j * 75
-					});
-					if (j % 4 == 0)
-					{
-						gameInstance.AddGuts(new Point(position.X + Game1.random.Next(-TileSize, TileSize), position.Y + Game1.random.Next(-TileSize, TileSize)), MONSTER_TYPE.dracula);
-					}
-					if (j % 4 == 0)
-					{
-						gameInstance.temporarySprites.Add(new TemporaryAnimatedSprite("LooseSprites\\Cursors", new Rectangle(464, 1792, 16, 16), 80f, 5, 0, new Vector2(position.X + Game1.random.Next(-TileSize, TileSize), position.Y + Game1.random.Next(-TileSize, TileSize)) + topLeftScreenCoordinate + new Vector2(TileSize / 2, TileSize / 2), flicker: false, flipped: false, 1f, 0f, Color.White, 3f, 0f, 0f, 0f, local: true)
-						{
-							delayBeforeAnimationStart = j * 75
-						});
-					}
-					if (j % 3 == 0)
-					{
-						gameInstance.temporarySprites.Add(new TemporaryAnimatedSprite("LooseSprites\\Cursors", new Rectangle(544, 1728, 16, 16), 100f, 4, 0, new Vector2(position.X + Game1.random.Next(-TileSize, TileSize), position.Y + Game1.random.Next(-TileSize, TileSize)) + topLeftScreenCoordinate + new Vector2(TileSize / 2, TileSize / 2), flicker: false, flipped: false, 1f, 0f, Color.White, 3f, 0f, 0f, 0f, local: true)
-						{
-							delayBeforeAnimationStart = j * 75
-						});
-					}
-				}
-			}
-
-            public override bool TakeDamage(int damage)
-			{
-				if (phase == -1)
-				{
-					return false;
-				}
-				health -= damage;
-				if (health < 0)
-				{
-					return true;
-				}
-				flashColorTimer = 100f;
-				Game1.playSound("cowboy_monsterhit");
-				return false;
-			}
-
-			public override bool Move(Vector2 playerPosition, GameTime time)
-			{
-				if (flashColorTimer > 0f)
-				{
-					flashColorTimer -= time.ElapsedGameTime.Milliseconds;
-				}
-				phaseInternalTimer -= time.ElapsedGameTime.Milliseconds;
-				switch (phase)
-				{
-					case -1:
-						if (phaseInternalTimer <= 0)
-						{
-							phaseInternalCounter = 0;
-							if (Game1.soundBank != null)
-							{
-								outlawSong = Game1.soundBank.GetCue("cowboy_boss");
-								outlawSong.Play();
-							}
-							phase = 0;
-						}
-						break;
-					case 0:
-						{
-							if (phaseInternalCounter == 0)
-							{
-								phaseInternalCounter++;
-								phaseInternalTimer = Game1.random.Next(3000, 7000);
-							}
-							if (phaseInternalTimer < 0)
-							{
-								phaseInternalCounter = 0;
-								phase = Game1.random.Next(1, 4);
-								phaseInternalTimer = 9999;
-							}
-							Vector2 target = playerPosition;
-							if (!(gameInstance.deathTimer <= 0f))
-							{
-								break;
-							}
-							int movementDirection = -1;
-							if (Math.Abs(target.X - (float)position.X) > Math.Abs(target.Y - (float)position.Y))
-							{
-								if (target.X + (float)speed < (float)position.X)
-								{
-									movementDirection = 3;
-								}
-								else if (target.X > (float)(position.X + speed))
-								{
-									movementDirection = 1;
-								}
-								else if (target.Y > (float)(position.Y + speed))
-								{
-									movementDirection = 2;
-								}
-								else if (target.Y + (float)speed < (float)position.Y)
-								{
-									movementDirection = 0;
-								}
-							}
-							else if (target.Y > (float)(position.Y + speed))
-							{
-								movementDirection = 2;
-							}
-							else if (target.Y + (float)speed < (float)position.Y)
-							{
-								movementDirection = 0;
-							}
-							else if (target.X + (float)speed < (float)position.X)
-							{
-								movementDirection = 3;
-							}
-							else if (target.X > (float)(position.X + speed))
-							{
-								movementDirection = 1;
-							}
-							Rectangle attemptedPosition = position;
-							switch (movementDirection)
-							{
-								case 0:
-									attemptedPosition.Y -= speed;
-									break;
-								case 1:
-									attemptedPosition.X += speed;
-									break;
-								case 2:
-									attemptedPosition.Y += speed;
-									break;
-								case 3:
-									attemptedPosition.X -= speed;
-									break;
-							}
-							attemptedPosition.X = position.X - (attemptedPosition.X - position.X);
-							attemptedPosition.Y = position.Y - (attemptedPosition.Y - position.Y);
-							if (!gameInstance.IsCollidingWithMapForMonsters(attemptedPosition) && !gameInstance.IsCollidingWithMonster(attemptedPosition, this))
-							{
-								position = attemptedPosition;
-							}
-							shootTimer -= time.ElapsedGameTime.Milliseconds;
-							if (shootTimer < 0)
-							{
-								Vector2 trajectory = Utility.getVelocityTowardPoint(new Point(position.X + TileSize / 2, position.Y), playerPosition + new Vector2(TileSize / 2, TileSize / 2), 8f);
-								if (gameInstance.playerMovementDirections.Count > 0)
-								{
-									trajectory = Utility.getTranslatedVector2(trajectory, gameInstance.playerMovementDirections.Last(), 3f);
-								}
-
-								//gameInstance.enemyBullets.Add(new CowboyBullet(gameInstance, new Point(position.X + TileSize / 2, position.Y + TileSize / 2), new Point((int)trajectory.X, (int)trajectory.Y), 1));
-								gameInstance.NETspawnBullet(false, new Point(position.X + TileSize / 2, position.Y + TileSize / 2), new Point((int)trajectory.X, (int)trajectory.Y), 1);
-								shootTimer = 250;
-								Game1.playSound("Cowboy_gunshot");
-							}
-							break;
-						}
-					case 2:
-					case 3:
-						if (phaseInternalCounter == 0)
-						{
-							Point oldPosition = position.Location;
-							if (position.X > homePosition.X + 6)
-							{
-								position.X -= 6;
-							}
-							else if (position.X < homePosition.X - 6)
-							{
-								position.X += 6;
-							}
-							if (position.Y > homePosition.Y + 6)
-							{
-								position.Y -= 6;
-							}
-							else if (position.Y < homePosition.Y - 6)
-							{
-								position.Y += 6;
-							}
-							if (position.Location.Equals(oldPosition))
-							{
-								phaseInternalCounter++;
-								phaseInternalTimer = 1500;
-							}
-						}
-						else if (phaseInternalCounter == 1 && phaseInternalTimer < 0)
-						{
-							SummonEnemies(new Point(position.X + TileSize / 2, position.Y + TileSize / 2), (MONSTER_TYPE)Game1.random.Next(0, 5));
-							if (Game1.random.NextDouble() < 0.4)
-							{
-								phase = 0;
-								phaseInternalCounter = 0;
-							}
-							else
-							{
-								phaseInternalTimer = 2000;
-							}
-						}
-						break;
-					case 1:
-						if (phaseInternalCounter == 0)
-						{
-							Point oldPosition2 = position.Location;
-							if (position.X > homePosition.X + 6)
-							{
-								position.X -= 6;
-							}
-							else if (position.X < homePosition.X - 6)
-							{
-								position.X += 6;
-							}
-							if (position.Y > homePosition.Y + 6)
-							{
-								position.Y -= 6;
-							}
-							else if (position.Y < homePosition.Y - 6)
-							{
-								position.Y += 6;
-							}
-							if (position.Location.Equals(oldPosition2))
-							{
-								phaseInternalCounter++;
-								phaseInternalTimer = 1500;
-							}
-						}
-						else if (phaseInternalCounter == 1)
-						{
-							if (phaseInternalTimer < 0)
-							{
-								phaseInternalCounter++;
-								phaseInternalTimer = 2000;
-								shootTimer = 200;
-								FireSpread(new Point(position.X + TileSize / 2, position.Y + TileSize / 2), 0.0);
-							}
-						}
-						else if (phaseInternalCounter == 2)
-						{
-							shootTimer -= time.ElapsedGameTime.Milliseconds;
-							if (shootTimer < 0)
-							{
-								FireSpread(new Point(position.X + TileSize / 2, position.Y + TileSize / 2), 0.0);
-								shootTimer = 200;
-							}
-							if (phaseInternalTimer < 0)
-							{
-								phaseInternalCounter++;
-								phaseInternalTimer = 500;
-							}
-						}
-						else if (phaseInternalCounter == 3)
-						{
-							if (phaseInternalTimer < 0)
-							{
-								phaseInternalTimer = 2000;
-								shootTimer = 200;
-								phaseInternalCounter++;
-								Vector2 trajectory3 = Utility.getVelocityTowardPoint(new Point(position.X + TileSize / 2, position.Y), playerPosition + new Vector2(TileSize / 2, TileSize / 2), 8f);
-								//gameInstance.enemyBullets.Add(new CowboyBullet(gameInstance, new Point(position.X + TileSize / 2, position.Y + TileSize / 2), new Point((int)trajectory3.X, (int)trajectory3.Y), 1));
-								gameInstance.NETspawnBullet(false, new Point(position.X + TileSize / 2, position.Y + TileSize / 2), new Point((int)trajectory3.X, (int)trajectory3.Y), 1);
-								Game1.playSound("Cowboy_gunshot");
-							}
-						}
-						else
-						{
-							if (phaseInternalCounter != 4)
-							{
-								break;
-							}
-							shootTimer -= time.ElapsedGameTime.Milliseconds;
-							if (shootTimer < 0)
-							{
-								Vector2 trajectory2 = Utility.getVelocityTowardPoint(new Point(position.X + TileSize / 2, position.Y), playerPosition + new Vector2(TileSize / 2, TileSize / 2), 8f);
-								trajectory2.X += Game1.random.Next(-1, 2);
-								trajectory2.Y += Game1.random.Next(-1, 2);
-								//gameInstance.enemyBullets.Add(new CowboyBullet(gameInstance, new Point(position.X + TileSize / 2, position.Y + TileSize / 2), new Point((int)trajectory2.X, (int)trajectory2.Y), 1));
-								gameInstance.NETspawnBullet(false, new Point(position.X + TileSize / 2, position.Y + TileSize / 2), new Point((int)trajectory2.X, (int)trajectory2.Y), 1);
-								Game1.playSound("Cowboy_gunshot");
-								shootTimer = 200;
-							}
-							if (phaseInternalTimer < 0)
-							{
-								if (Game1.random.NextDouble() < 0.4)
-								{
-									phase = 0;
-									phaseInternalCounter = 0;
-								}
-								else
-								{
-									phaseInternalTimer = 500;
-									phaseInternalCounter = 1;
-								}
-							}
-						}
-						break;
-				}
-				return false;
-			}
-
-			public void FireSpread(Point origin, double offsetAngle)
-			{
-				Vector2[] surroundingTileLocationsArray = Utility.getSurroundingTileLocationsArray(new Vector2(origin.X, origin.Y));
-				for (int i = 0; i < surroundingTileLocationsArray.Length; i++)
-				{
-					Vector2 p = surroundingTileLocationsArray[i];
-					Vector2 trajectory = Utility.getVelocityTowardPoint(origin, p, 6f);
-					if (offsetAngle > 0.0)
-					{
-						offsetAngle /= 2.0;
-						trajectory.X = (float)(Math.Cos(offsetAngle) * (double)(p.X - (float)origin.X) - Math.Sin(offsetAngle) * (double)(p.Y - (float)origin.Y) + (double)origin.X);
-						trajectory.Y = (float)(Math.Sin(offsetAngle) * (double)(p.X - (float)origin.X) + Math.Cos(offsetAngle) * (double)(p.Y - (float)origin.Y) + (double)origin.Y);
-						trajectory = Utility.getVelocityTowardPoint(origin, trajectory, 8f);
-					}
-					//gameInstance.enemyBullets.Add(new CowboyBullet(gameInstance, origin, new Point((int)trajectory.X, (int)trajectory.Y), 1));
-					gameInstance.NETspawnBullet(false, origin, new Point((int)trajectory.X, (int)trajectory.Y), 1);
-			}
-				Game1.playSound("Cowboy_gunshot");
-			}
-
-			public void SummonEnemies(Point origin, MONSTER_TYPE which)
-			{
-				if(gameInstance.isHost)
-                {
-					if (!gameInstance.IsCollidingWithMonster(new Rectangle(origin.X - TileSize - TileSize / 2, origin.Y, TileSize, TileSize), null))
-					{
-						gameInstance.monsters.Add(new CowboyMonster(gameInstance, which, new Point(origin.X - TileSize - TileSize / 2, origin.Y)));
-					}
-					if (!gameInstance.IsCollidingWithMonster(new Rectangle(origin.X + TileSize + TileSize / 2, origin.Y, TileSize, TileSize), null))
-					{
-						gameInstance.monsters.Add(new CowboyMonster(gameInstance, which, new Point(origin.X + TileSize + TileSize / 2, origin.Y)));
-					}
-					if (!gameInstance.IsCollidingWithMonster(new Rectangle(origin.X, origin.Y + TileSize + TileSize / 2, TileSize, TileSize), null))
-					{
-						gameInstance.monsters.Add(new CowboyMonster(gameInstance, which, new Point(origin.X, origin.Y + TileSize + TileSize / 2)));
-					}
-					if (!gameInstance.IsCollidingWithMonster(new Rectangle(origin.X, origin.Y - TileSize - TileSize * 3 / 4, TileSize, TileSize), null))
-					{
-						gameInstance.monsters.Add(new CowboyMonster(gameInstance, which, new Point(origin.X, origin.Y - TileSize - TileSize * 3 / 4)));
-					}
-				}
-
-				gameInstance.temporarySprites.Add(new TemporaryAnimatedSprite("LooseSprites\\Cursors", new Rectangle(464, 1792, 16, 16), 80f, 5, 0, topLeftScreenCoordinate + new Vector2(origin.X - TileSize - TileSize / 2, origin.Y), flicker: false, flipped: false, 1f, 0f, Color.White, 3f, 0f, 0f, 0f, local: true)
-				{
-					delayBeforeAnimationStart = Game1.random.Next(800)
-				});
-				gameInstance.temporarySprites.Add(new TemporaryAnimatedSprite("LooseSprites\\Cursors", new Rectangle(464, 1792, 16, 16), 80f, 5, 0, topLeftScreenCoordinate + new Vector2(origin.X + TileSize + TileSize / 2, origin.Y), flicker: false, flipped: false, 1f, 0f, Color.White, 3f, 0f, 0f, 0f, local: true)
-				{
-					delayBeforeAnimationStart = Game1.random.Next(800)
-				});
-				gameInstance.temporarySprites.Add(new TemporaryAnimatedSprite("LooseSprites\\Cursors", new Rectangle(464, 1792, 16, 16), 80f, 5, 0, topLeftScreenCoordinate + new Vector2(origin.X, origin.Y - TileSize - TileSize * 3 / 4), flicker: false, flipped: false, 1f, 0f, Color.White, 3f, 0f, 0f, 0f, local: true)
-				{
-					delayBeforeAnimationStart = Game1.random.Next(800)
-				});
-				gameInstance.temporarySprites.Add(new TemporaryAnimatedSprite("LooseSprites\\Cursors", new Rectangle(464, 1792, 16, 16), 80f, 5, 0, topLeftScreenCoordinate + new Vector2(origin.X, origin.Y + TileSize + TileSize / 2), flicker: false, flipped: false, 1f, 0f, Color.White, 3f, 0f, 0f, 0f, local: true)
-				{
-					delayBeforeAnimationStart = Game1.random.Next(800)
-				});
-				Game1.playSound("Cowboy_monsterDie");
-			}
-		}
-
-		public class Outlaw : CowboyMonster
-		{
-			public const int talkingPhase = -1;
-
-			public const int hidingPhase = 0;
-
-			public const int dartOutAndShootPhase = 1;
-
-			public const int runAndGunPhase = 2;
-
-			public const int runGunAndPantPhase = 3;
-
-			public const int shootAtPlayerPhase = 4;
-
-			public int phase;
-
-			public int phaseCountdown;
-
-			public int shootTimer;
-
-			public int phaseInternalTimer;
-
-			public int phaseInternalCounter;
-
-			public bool dartLeft;
-
-			public int fullHealth;
-
-			public Point homePosition;
-
-			public Outlaw(GameMultiplayerPrairieKing game, Point position, int health)
-				: base(game, MONSTER_TYPE.outlaw , position)
-			{
-				homePosition = position;
-				base.health = health;
-				fullHealth = health;
-				phaseCountdown = 4000;
-				phase = -1;
-
-
-			}
-
-			public override void Draw(SpriteBatch b)
-			{
-				b.Draw(Game1.staminaRect, new Rectangle((int)topLeftScreenCoordinate.X, (int)topLeftScreenCoordinate.Y + 16 * TileSize + 3, (int)((float)(16 * TileSize) * ((float)health / (float)fullHealth)), TileSize / 3), new Color(188, 51, 74));
-				if (flashColorTimer > 0f)
-				{
-					b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(position.X, position.Y), new Rectangle(496, 1696, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, (float)position.Y / 10000f + 0.001f);
-					return;
-				}
-				int num = phase;
-				if ((uint)(num - -1) <= 1u)
-				{
-					b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(position.X, position.Y), new Rectangle(560 + ((phaseCountdown / 250 % 2 == 0) ? 16 : 0), 1776, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, (float)position.Y / 10000f + 0.001f);
-					if (phase == -1 && phaseCountdown > 1000)
-					{
-						b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(position.X - TileSize / 2, position.Y - TileSize * 2), new Rectangle(576 + ((gameInstance.whichWave > 5) ? 32 : 0), 1792, 32, 32), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, (float)position.Y / 10000f + 0.001f);
-					}
-				}
-				else if (phase == 3 && phaseInternalCounter == 2)
-				{
-					b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(position.X, position.Y), new Rectangle(560 + ((phaseCountdown / 250 % 2 == 0) ? 16 : 0), 1776, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, (float)position.Y / 10000f + 0.001f);
-				}
-				else
-				{
-					b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(position.X, position.Y), new Rectangle(592 + ((phaseCountdown / 80 % 2 == 0) ? 16 : 0), 1776, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, (float)position.Y / 10000f + 0.001f);
-				}
-			}
-
-			public override bool Move(Vector2 playerPosition, GameTime time)
-			{
-				if (flashColorTimer > 0f)
-				{
-					flashColorTimer -= time.ElapsedGameTime.Milliseconds;
-				}
-				phaseCountdown -= time.ElapsedGameTime.Milliseconds;
-				if (position.X > 17 * TileSize || position.X < -TileSize)
-				{
-					position.X = 16 * TileSize / 2;
-				}
-				switch (phase)
-				{
-					case -1:
-					case 0:
-						if (phaseCountdown >= 0)
-						{
-							break;
-						}
-						phase = Game1.random.Next(1, 5);
-						dartLeft = (playerPosition.X < (float)position.X);
-						if (playerPosition.X > (float)(7 * TileSize) && playerPosition.X < (float)(9 * TileSize))
-						{
-							if (Game1.random.NextDouble() < 0.66 || phase == 2)
-							{
-								phase = 4;
-							}
-						}
-						else if (phase == 4)
-						{
-							phase = 3;
-						}
-						phaseInternalCounter = 0;
-						phaseInternalTimer = 0;
-						break;
-					case 4:
-						{
-							int motion4 = dartLeft ? (-3) : 3;
-							if (phaseInternalCounter == 0 && (!(playerPosition.X > (float)(7 * TileSize)) || !(playerPosition.X < (float)(9 * TileSize))))
-							{
-								phaseInternalCounter = 1;
-								phaseInternalTimer = Game1.random.Next(500, 1500);
-								break;
-							}
-							if (Math.Abs(position.Location.X - homePosition.X + TileSize / 2) < TileSize * 7 + 12 && phaseInternalCounter == 0)
-							{
-								position.X += motion4;
-								break;
-							}
-							if (phaseInternalCounter == 2)
-							{
-								motion4 = (dartLeft ? (-4) : 4);
-								position.X -= motion4;
-								if (Math.Abs(position.X - homePosition.X) < 4)
-								{
-									position.X = homePosition.X;
-									phase = 0;
-									phaseCountdown = Game1.random.Next(1000, 2000);
-								}
-								break;
-							}
-							if (phaseInternalCounter == 0)
-							{
-								phaseInternalCounter++;
-								phaseInternalTimer = Game1.random.Next(1000, 2000);
-							}
-							phaseInternalTimer -= time.ElapsedGameTime.Milliseconds;
-							shootTimer -= time.ElapsedGameTime.Milliseconds;
-							if (shootTimer < 0)
-							{
-								Vector2 trajectory = Utility.getVelocityTowardPoint(new Point(position.X + TileSize / 2, position.Y), playerPosition + new Vector2(TileSize / 2, TileSize / 2), 8f);
-								//gameInstance.enemyBullets.Add(new CowboyBullet(gameInstance, new Point(position.X + TileSize / 2, position.Y - TileSize / 2), new Point((int)trajectory.X, (int)trajectory.Y), 1));
-								gameInstance.NETspawnBullet(false, new Point(position.X + TileSize / 2, position.Y - TileSize / 2), new Point((int)trajectory.X, (int)trajectory.Y), 1);
-								shootTimer = 120;
-								Game1.playSound("Cowboy_gunshot");
-							}
-							if (phaseInternalTimer <= 0)
-							{
-								phaseInternalCounter++;
-							}
-							break;
-						}
-					case 1:
-						{
-							int motion4 = dartLeft ? (-3) : 3;
-							if (Math.Abs(position.Location.X - homePosition.X + TileSize / 2) < TileSize * 2 + 12 && phaseInternalCounter == 0)
-							{
-								position.X += motion4;
-								if (position.X > 256)
-								{
-									phaseInternalCounter = 2;
-								}
-								break;
-							}
-							if (phaseInternalCounter == 2)
-							{
-								position.X -= motion4;
-								if (Math.Abs(position.X - homePosition.X) < 4)
-								{
-									position.X = homePosition.X;
-									phase = 0;
-									phaseCountdown = Game1.random.Next(1000, 2000);
-								}
-								break;
-							}
-							if (phaseInternalCounter == 0)
-							{
-								phaseInternalCounter++;
-								phaseInternalTimer = Game1.random.Next(1000, 2000);
-							}
-							phaseInternalTimer -= time.ElapsedGameTime.Milliseconds;
-							shootTimer -= time.ElapsedGameTime.Milliseconds;
-							if (shootTimer < 0)
-							{
-								//gameInstance.enemyBullets.Add(new CowboyBullet(gameInstance, new Point(position.X + TileSize / 2, position.Y - TileSize / 2), new Point(Game1.random.Next(-2, 3), -8), 1));
-								gameInstance.NETspawnBullet(false, new Point(position.X + TileSize / 2, position.Y - TileSize / 2), new Point(Game1.random.Next(-2, 3), -8), 1);
-								shootTimer = 150;
-								Game1.playSound("Cowboy_gunshot");
-							}
-							if (phaseInternalTimer <= 0)
-							{
-								phaseInternalCounter++;
-							}
-							break;
-						}
-					case 2:
-						if (phaseInternalCounter == 2)
-						{
-							if (position.X < homePosition.X)
-							{
-								position.X += 4;
-							}
-							else
-							{
-								position.X -= 4;
-							}
-							if (Math.Abs(position.X - homePosition.X) < 5)
-							{
-								position.X = homePosition.X;
-								phase = 0;
-								phaseCountdown = Game1.random.Next(1000, 2000);
-							}
-							return false;
-						}
-						if (phaseInternalCounter == 0)
-						{
-							phaseInternalCounter++;
-							phaseInternalTimer = Game1.random.Next(4000, 7000);
-						}
-						phaseInternalTimer -= time.ElapsedGameTime.Milliseconds;
-						if ((float)position.X > playerPosition.X && (float)position.X - playerPosition.X > 3f)
-						{
-							position.X -= 2;
-						}
-						else if ((float)position.X < playerPosition.X && playerPosition.X - (float)position.X > 3f)
-						{
-							position.X += 2;
-						}
-						shootTimer -= time.ElapsedGameTime.Milliseconds;
-						if (shootTimer < 0)
-						{
-							//gameInstance.enemyBullets.Add(new CowboyBullet(gameInstance, new Point(position.X + TileSize / 2, position.Y - TileSize / 2), new Point(Game1.random.Next(-1, 2), -8), 1));
-							gameInstance.NETspawnBullet(false, new Point(position.X + TileSize / 2, position.Y - TileSize / 2), new Point(Game1.random.Next(-1, 2), -8), 1);
-							shootTimer = 250;
-							if (fullHealth > 50)
-							{
-								shootTimer -= 50;
-							}
-							if (Game1.random.NextDouble() < 0.2)
-							{
-								shootTimer = 150;
-							}
-							Game1.playSound("Cowboy_gunshot");
-						}
-						if (phaseInternalTimer <= 0)
-						{
-							phaseInternalCounter++;
-						}
-						break;
-					case 3:
-						{
-							if (phaseInternalCounter == 0)
-							{
-								phaseInternalCounter++;
-								phaseInternalTimer = Game1.random.Next(3000, 6500);
-								break;
-							}
-							if (phaseInternalCounter == 2)
-							{
-								phaseInternalTimer -= time.ElapsedGameTime.Milliseconds;
-								if (phaseInternalTimer <= 0)
-								{
-									phaseInternalCounter++;
-								}
-								break;
-							}
-							if (phaseInternalCounter == 3)
-							{
-								if (position.X < homePosition.X)
-								{
-									position.X += 4;
-								}
-								else
-								{
-									position.X -= 4;
-								}
-								if (Math.Abs(position.X - homePosition.X) < 5)
-								{
-									position.X = homePosition.X;
-									phase = 0;
-									phaseCountdown = Game1.random.Next(1000, 2000);
-								}
-								break;
-							}
-							int motion4 = dartLeft ? (-3) : 3;
-							position.X += motion4;
-							if (position.X < TileSize || position.X > 15 * TileSize)
-							{
-								dartLeft = !dartLeft;
-							}
-							shootTimer -= time.ElapsedGameTime.Milliseconds;
-							if (shootTimer < 0)
-							{
-								//gameInstance.enemyBullets.Add(new CowboyBullet(gameInstance, new Point(position.X + TileSize / 2, position.Y - TileSize / 2), new Point(Game1.random.Next(-1, 2), -8), 1));
-								gameInstance.NETspawnBullet(false, new Point(position.X + TileSize / 2, position.Y - TileSize / 2), new Point(Game1.random.Next(-1, 2), -8), 1);
-								shootTimer = 250;
-								if (fullHealth > 50)
-								{
-									shootTimer -= 50;
-								}
-								if (Game1.random.NextDouble() < 0.2)
-								{
-									shootTimer = 150;
-								}
-								Game1.playSound("Cowboy_gunshot");
-							}
-							phaseInternalTimer -= time.ElapsedGameTime.Milliseconds;
-							if (phaseInternalTimer <= 0)
-							{
-								if (phase == 2)
-								{
-									phaseInternalCounter = 3;
-									break;
-								}
-								phaseInternalTimer = 3000;
-								phaseInternalCounter++;
-							}
-							break;
-						}
-				}
-				if (position.X <= 16 * TileSize)
-				{
-					_ = position.X;
-					_ = 0;
-				}
-				return false;
-			}
-
-			public override POWERUP_TYPE GetLootDrop()
-			{
-				return POWERUP_TYPE.LIFE;
-			}
-
-            public override void OnDeath()
-            {
-				if (gameInstance.isHost)
-				{
-					gameInstance.powerups.Add(new CowboyPowerup(gameInstance, (gameInstance.world == 0) ? POWERUP_TYPE.LOG : POWERUP_TYPE.SKULL, new Point(8 * TileSize, 10 * TileSize), 9999999));
-				}
-
-				if (outlawSong != null && outlawSong.IsPlaying)
-				{
-					outlawSong.Stop(AudioStopOptions.Immediate);
-				}
-				gameInstance.map[8, 8] = 10;
-				gameInstance.screenFlash = 200;
-				for (int i = 0; i < 15; i++)
-				{
-					gameInstance.temporarySprites.Add(new TemporaryAnimatedSprite("LooseSprites\\Cursors", new Rectangle(464, 1792, 16, 16), 80f, 5, 0, new Vector2(position.X + Game1.random.Next(-TileSize, TileSize), position.Y + Game1.random.Next(-TileSize, TileSize)) + topLeftScreenCoordinate + new Vector2(TileSize / 2, TileSize / 2), flicker: false, flipped: false, 1f, 0f, Color.White, 3f, 0f, 0f, 0f, local: true)
-					{
-						delayBeforeAnimationStart = i * 75
-					});
-				}
-			}
-
-            public override bool TakeDamage(int damage)
-			{
-				if (Math.Abs(position.X - homePosition.X) < 5)
-				{
-					return false;
-				}
-				health -= damage;
-				if (health < 0)
-				{
-					OnDeath();
-					return true;
-				}
-				flashColorTimer = 150f;
-				Game1.playSound("cowboy_monsterhit");
-				return false;
-			}
-		}
-
 		public ModMultiPlayerPrairieKing modInstance;
 
 		public bool isHost;
@@ -1514,22 +131,6 @@ namespace MultiPlayerPrairie
 		public const float playerSpeed = 3f;
 
 		public const int baseTileSize = 16;
-
-		public const int orcSpeed = 2;
-
-		public const int ogreSpeed = 1;
-
-		public const int ghostSpeed = 3;
-
-		public const int spikeySpeed = 3;
-
-		public const int orcHealth = 1;
-
-		public const int ghostHealth = 1;
-
-		public const int ogreHealth = 3;
-
-		public const int spikeyHealth = 2;
 
 		public const int cactusDanceDelay = 800;
 
@@ -1645,7 +246,7 @@ namespace MultiPlayerPrairie
 
 		public const int betweenWaveDuration = 5000;
 
-		public List<CowboyMonster> monsters = new();
+		public List<Enemy> monsters = new();
 
 		protected HashSet<Vector2> _borderTiles = new();
 
@@ -1691,9 +292,9 @@ namespace MultiPlayerPrairie
 
 		public int player2invincibletimer;
 
-		public List<CowboyBullet> bullets = new();
+		public List<Bullet> bullets = new();
 
-		public List<CowboyBullet> enemyBullets = new();
+		public List<Bullet> enemyBullets = new();
 
 		public int[,] map = new int[16, 16];
 
@@ -1742,11 +343,11 @@ namespace MultiPlayerPrairie
 
 		public Dictionary<POWERUP_TYPE, int> activePowerups = new();
 
-		public List<CowboyPowerup> powerups = new();
+		public List<Powerup> powerups = new();
 
 		public List<TemporaryAnimatedSprite> temporarySprites = new();
 
-		public CowboyPowerup heldItem;
+		public Powerup heldItem;
 
 		public int world = 0;
 
@@ -1834,11 +435,11 @@ namespace MultiPlayerPrairie
 
 		public Point gopherMotion;
 
-		private static ICue overworldSong;
+		public static ICue overworldSong;
 
-		private static ICue outlawSong;
+		public static ICue outlawSong;
 
-		private static ICue zombieSong;
+		public static ICue zombieSong;
 
 		protected HashSet<GameKeys> _buttonHeldState = new();
 
@@ -1874,7 +475,7 @@ namespace MultiPlayerPrairie
 			world = save_data.world.Value;
 			if (save_data.heldItem.Value != -100)
 			{
-				heldItem = new CowboyPowerup(this, (POWERUP_TYPE)save_data.heldItem.Value, Point.Zero, 9999);
+				heldItem = new Powerup(this, (POWERUP_TYPE)save_data.heldItem.Value, Point.Zero, 9999);
 			}
 			monsterChances = new List<Vector2>(save_data.monsterChances);
 			ApplyLevelSpecificStates();
@@ -2056,7 +657,7 @@ namespace MultiPlayerPrairie
 			return movementSpeed;
 		}
 
-		public bool GetPowerUp(CowboyPowerup c)
+		public bool GetPowerUp(Powerup c)
 		{
 			switch (c.which)
 			{
@@ -2089,7 +690,7 @@ namespace MultiPlayerPrairie
 							Game1.playSound("cowboy_powerup");
 							break;
 						}
-						CowboyPowerup tmp = heldItem;
+						Powerup tmp = heldItem;
 						heldItem = c;
 						noPickUpBox.Location = c.position;
 						tmp.position = c.position;
@@ -2209,7 +810,7 @@ namespace MultiPlayerPrairie
 						Game1.playSound("cowboy_explosion");
 						if (!shootoutLevel)
 						{
-							foreach (CowboyMonster c2 in monsters)
+							foreach (Enemy c2 in monsters)
 							{
 								AddGuts(c2.position.Location, c2.type);
 							}
@@ -2217,7 +818,7 @@ namespace MultiPlayerPrairie
 						}
 						else
 						{
-							foreach (CowboyMonster c in monsters)
+							foreach (Enemy c in monsters)
 							{
 								c.TakeDamage(30);
 								//bullets.Add(new CowboyBullet(this, c.position.Center, 2, 1));
@@ -2367,7 +968,7 @@ namespace MultiPlayerPrairie
 								{
 									if(isHost)
                                     {
-										powerups.Add(new CowboyPowerup(this, loot, monsters[k].position.Location, lootDuration));
+										powerups.Add(new Powerup(this, loot, monsters[k].position.Location, lootDuration));
 									}
 									
 								}
@@ -3184,7 +1785,7 @@ namespace MultiPlayerPrairie
 										spreadPistol = true;
 										break;
 									case ITEM_TYPE.STAR:
-										heldItem = new CowboyPowerup(this, POWERUP_TYPE.SHERRIFF, Point.Zero, 9999);
+										heldItem = new Powerup(this, POWERUP_TYPE.SHERRIFF, Point.Zero, 9999);
 										break;
 								}
 							}
@@ -3263,7 +1864,7 @@ namespace MultiPlayerPrairie
 					shotTimer = Math.Max(shotTimer, 20);
 				}
 				UpdateBullets(time);
-				foreach (CowboyPowerup powerup in powerups)
+				foreach (Powerup powerup in powerups)
 				{
 					Vector2 tile_position = new((powerup.position.X + TileSize / 2) / TileSize, (powerup.position.Y + TileSize / 2) / TileSize);
 					Vector2 corner_7 = new(powerup.position.X / TileSize, powerup.position.Y / TileSize);
@@ -3360,7 +1961,7 @@ namespace MultiPlayerPrairie
 							if (tries < 10)
 							{
 								if(isHost)
-									monsters.Add(new CowboyMonster(this,spawnQueue[p][0].type, new Point((int)tile.X * TileSize, (int)tile.Y * TileSize)));
+									monsters.Add(new Enemy(this,spawnQueue[p][0].type, new Point((int)tile.X * TileSize, (int)tile.Y * TileSize)));
 
 								if (whichRound > 0)
 								{
@@ -3383,7 +1984,7 @@ namespace MultiPlayerPrairie
 										if (Game1.random.NextDouble() < 0.5 && !IsCollidingWithMonster(new Rectangle(x * 16 * 3, 0, 48, 48), null))
 										{
 											if (isHost)
-												monsters.Add(new CowboyMonster(this,spawnQueue[p].First().type, new Point(x * TileSize, 0)));
+												monsters.Add(new Enemy(this,spawnQueue[p].First().type, new Point(x * TileSize, 0)));
 
 											if (whichRound > 0)
 											{
@@ -3406,7 +2007,7 @@ namespace MultiPlayerPrairie
 										if (Game1.random.NextDouble() < 0.5 && !IsCollidingWithMonster(new Rectangle(720, y * TileSize, 48, 48), null))
 										{
 											if (isHost)
-												monsters.Add(new CowboyMonster(this,spawnQueue[p].First().type, new Point(15 * TileSize, y * TileSize)));
+												monsters.Add(new Enemy(this,spawnQueue[p].First().type, new Point(15 * TileSize, y * TileSize)));
 
 											if (whichRound > 0)
 											{
@@ -3429,7 +2030,7 @@ namespace MultiPlayerPrairie
 										if (Game1.random.NextDouble() < 0.5 && !IsCollidingWithMonster(new Rectangle(x2 * 16 * 3, 15 * TileSize, 48, 48), null))
 										{
 											if (isHost)
-												monsters.Add(new CowboyMonster(this,spawnQueue[p].First().type, new Point(x2 * TileSize, 15 * TileSize)));
+												monsters.Add(new Enemy(this,spawnQueue[p].First().type, new Point(x2 * TileSize, 15 * TileSize)));
 
 											if (whichRound > 0)
 											{
@@ -3452,7 +2053,7 @@ namespace MultiPlayerPrairie
 										if (Game1.random.NextDouble() < 0.5 && !IsCollidingWithMonster(new Rectangle(0, y2 * TileSize, 48, 48), null))
 										{
 											if (isHost)
-												monsters.Add(new CowboyMonster(this,spawnQueue[p].First().type, new Point(0, y2 * TileSize)));
+												monsters.Add(new Enemy(this,spawnQueue[p].First().type, new Point(0, y2 * TileSize)));
 
 											if (whichRound > 0)
 											{
@@ -3473,7 +2074,7 @@ namespace MultiPlayerPrairie
 					if (waveTimer <= 0 && monsters.Count > 0 && IsSpawnQueueEmpty())
 					{
 						bool onlySpikeys = true;
-						foreach (CowboyMonster monster in monsters)
+						foreach (Enemy monster in monsters)
 						{
 							if (monster.type != MONSTER_TYPE.spikey)
 							{
@@ -3483,7 +2084,7 @@ namespace MultiPlayerPrairie
 						}
 						if (onlySpikeys)
 						{
-							foreach (CowboyMonster monster2 in monsters)
+							foreach (Enemy monster2 in monsters)
 							{
 								monster2.health = 1;
 							}
@@ -3575,7 +2176,7 @@ namespace MultiPlayerPrairie
             {
 				PK_EnemyPositions message = new();
 				message.positions = new Dictionary<long, Point>();
-				foreach (CowboyMonster m in monsters)
+				foreach (Enemy m in monsters)
 				{
 					message.positions.Add(m.id, m.position.Location);
 				}
@@ -4357,9 +2958,9 @@ namespace MultiPlayerPrairie
 			return true;
 		}
 
-		public bool IsCollidingWithMonster(Rectangle r, CowboyMonster subject)
+		public bool IsCollidingWithMonster(Rectangle r, Enemy subject)
 		{
-			foreach (CowboyMonster c in monsters)
+			foreach (Enemy c in monsters)
 			{
 				if ((subject == null || !subject.Equals(c)) && Math.Abs(c.position.X - r.X) < 48 && Math.Abs(c.position.Y - r.Y) < 48 && r.Intersects(new Rectangle(c.position.X, c.position.Y, 48, 48)))
 				{
@@ -4669,15 +3270,15 @@ namespace MultiPlayerPrairie
 				{
 					temporarySprite.draw(b, localPosition: true);
 				}
-				foreach (CowboyPowerup powerup in powerups)
+				foreach (Powerup powerup in powerups)
 				{
 					powerup.Draw(b);
 				}
-				foreach (CowboyBullet p2 in bullets)
+				foreach (Bullet p2 in bullets)
 				{
 					b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(p2.position.X, p2.position.Y), new Rectangle(518, 1760 + (bulletDamage - 1) * 4, 4, 4), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 0.9f);
 				}
-				foreach (CowboyBullet p in enemyBullets)
+				foreach (Bullet p in enemyBullets)
 				{
 					b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(p.position.X, p.position.Y), new Rectangle(523, 1760, 5, 5), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 0.9f);
 				}
@@ -4705,7 +3306,7 @@ namespace MultiPlayerPrairie
 				{
 					b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(8.5f, 15f) * TileSize + new Vector2(-12f, 0f), new Rectangle(355, 1750, 8, 8), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 0.001f);
 				}
-				foreach (CowboyMonster monster in monsters)
+				foreach (Enemy monster in monsters)
 				{
 					monster.Draw(b);
 				}
@@ -4808,6 +3409,10 @@ namespace MultiPlayerPrairie
 			}
 			lives = 3;
 			Game1.stopMusicTrack(Game1.MusicContext.MiniGame);
+
+			isHost = false;
+			modInstance.isHost.Value = false;
+			modInstance.isHostAvailable = false;
 
 			PK_ExitGame message = new();
 			modInstance.Helper.Multiplayer.SendMessage(message, "PK_ExitGame");

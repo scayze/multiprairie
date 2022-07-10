@@ -8,7 +8,8 @@ using StardewValley;
 using System.Linq;
 using StardewValley.Objects;
 using HarmonyLib;
-
+using MultiplayerPrairieKing.Entities;
+using MultiplayerPrairieKing.Entities.Enemies;
 
 namespace MultiPlayerPrairie
 {
@@ -32,7 +33,7 @@ namespace MultiPlayerPrairie
                 prairieKingOptions[3] = new Response("Exit", Game1.content.LoadString("Strings\\Locations:Saloon_Arcade_Minecart_Exit"));
 
                 //Display additional Host/Join option depending on if theres a lobby available
-                if(ModMultiPlayerPrairieKing.instance.isHostAvailable)
+                if(instance.isHostAvailable)
                     prairieKingOptions[2] = new Response("JoinMultiplayer", "Join Co-op Journey");
                 else
                     prairieKingOptions[2] = new Response("HostMultiplayer", "Host Co-op Journey");
@@ -44,7 +45,7 @@ namespace MultiPlayerPrairie
                 return false;
             }
 
-            // Callback for choosing from the dialogu options when interacting with the arcade machine
+            // Callback for choosing from the dialogue options when interacting with the arcade machine
             static public void ArcadeDialogueSet(Farmer who, string dialogue_id)
             {
                 switch(dialogue_id)
@@ -57,20 +58,20 @@ namespace MultiPlayerPrairie
                         Game1.currentMinigame = new StardewValley.Minigames.AbigailGame();
                         break;
                     case "JoinMultiplayer":
-                        ModMultiPlayerPrairieKing.instance.isHost.Value = false;
+                        instance.isHost.Value = false;
 
                         //NET Join Lobby
                         PK_JoinLobby mJoinLobby = new();
-                        ModMultiPlayerPrairieKing.instance.Helper.Multiplayer.SendMessage(mJoinLobby, "PK_JoinLobby");
+                        instance.Helper.Multiplayer.SendMessage(mJoinLobby, "PK_JoinLobby");
 
                         //Start Game
                         Game1.player.jotpkProgress.Value = null;
-                        Game1.currentMinigame = new GameMultiplayerPrairieKing(ModMultiPlayerPrairieKing.instance, ModMultiPlayerPrairieKing.instance.isHost.Value, true);
+                        Game1.currentMinigame = new GameMultiplayerPrairieKing(instance, instance.isHost.Value, true);
                         break;
                     case "HostMultiplayer":
                         //When host is available
-                        ModMultiPlayerPrairieKing.instance.isHost.Value = true;
-                        ModMultiPlayerPrairieKing.instance.isHostAvailable = true;
+                        instance.isHost.Value = true;
+                        instance.isHostAvailable = true;
 
                         //Open Waiting Dialogue
                         Response[] hostDialogueOptions = new Response[1];
@@ -80,7 +81,7 @@ namespace MultiPlayerPrairie
 
                         //NET Start Hosting
                         PK_StartHosting mStartHosting = new();
-                        ModMultiPlayerPrairieKing.instance.Helper.Multiplayer.SendMessage(mStartHosting, "PK_StartHosting");
+                        instance.Helper.Multiplayer.SendMessage(mStartHosting, "PK_StartHosting");
                         break;
                 }
             }
@@ -112,7 +113,7 @@ namespace MultiPlayerPrairie
             //Patch the showPrairieKingMenu method to show an additional "Host / Join co-op Journey" option.
             var harmony = new Harmony(this.ModManifest.UniqueID);
             harmony.Patch(
-                original: AccessTools.Method(typeof(StardewValley.GameLocation), nameof(StardewValley.GameLocation.showPrairieKingMenu)),
+                original: AccessTools.Method(typeof(GameLocation), nameof(GameLocation.showPrairieKingMenu)),
                 prefix: new HarmonyMethod(typeof(GameLocationPatches), nameof(GameLocationPatches.ShowPrairieKingMenu_Prefix))
             );
         }
@@ -165,7 +166,7 @@ namespace MultiPlayerPrairie
 
         static public void HostDialogueSet(Farmer who, string dialogue_id)
         {
-            instance.Monitor.Log("Dialogue Chosen: " + dialogue_id, LogLevel.Debug);
+            instance.Monitor.Log("Dialogue Chosen: " + dialogue_id, LogLevel.Info);
             switch (dialogue_id)
             {
                 case "Cancel":
@@ -196,7 +197,7 @@ namespace MultiPlayerPrairie
             switch(e.Type)
             {
                 case "PK_StartHosting":
-                    this.Monitor.Log(e.Type + " event sent by " + e.FromPlayerID + " to " + Game1.player.UniqueMultiplayerID, LogLevel.Debug);
+                    Monitor.Log(e.Type + " event sent by " + e.FromPlayerID + " to " + Game1.player.UniqueMultiplayerID, LogLevel.Debug);
                     isHostAvailable = true;
 
                     //Create Dialogue to wait for joining person
@@ -207,12 +208,12 @@ namespace MultiPlayerPrairie
                     break;
 
                 case "PK_StopHosting":
-                    this.Monitor.Log(e.Type + " event sent by " + e.FromPlayerID + " to " + Game1.player.UniqueMultiplayerID, LogLevel.Debug);
+                    Monitor.Log(e.Type + " event sent by " + e.FromPlayerID + " to " + Game1.player.UniqueMultiplayerID, LogLevel.Debug);
                     isHostAvailable = false;
                     break;
 
                 case "PK_JoinLobby":
-                    this.Monitor.Log(e.Type + " event sent by " + e.FromPlayerID + " to " + Game1.player.UniqueMultiplayerID, LogLevel.Debug);
+                    Monitor.Log(e.Type + " event sent by " + e.FromPlayerID + " to " + Game1.player.UniqueMultiplayerID, LogLevel.Debug);
 
                     Game1.player.jotpkProgress.Value = null;
                     Game1.currentMinigame = new GameMultiplayerPrairieKing(ModMultiPlayerPrairieKing.instance, ModMultiPlayerPrairieKing.instance.isHost.Value, true);
@@ -243,7 +244,7 @@ namespace MultiPlayerPrairie
                     //public CowboyPowerup(GameMultiplayerPrairieKing game, int which, Point position, int duration)
                     if (!PK_game.isHost)
                     {
-                        GameMultiplayerPrairieKing.CowboyPowerup powerup = new(PK_game, powerupType, mPowerupSpawn.position, mPowerupSpawn.duration);
+                        Powerup powerup = new(PK_game, powerupType, mPowerupSpawn.position, mPowerupSpawn.duration);
                         powerup.id = mPowerupSpawn.id;
                         PK_game.powerups.Add(powerup);
                     }
@@ -269,7 +270,7 @@ namespace MultiPlayerPrairie
 
                     for (int i = PK_game.powerups.Count - 1; i >= 0; i--)
                     {
-                        GameMultiplayerPrairieKing.CowboyPowerup powerup = PK_game.powerups[i];
+                        Powerup powerup = PK_game.powerups[i];
                         if (powerup.id == mPowerupPickup.id)
                         {
                             PK_game.powerups.RemoveAt(i);
@@ -297,7 +298,7 @@ namespace MultiPlayerPrairie
 
                 case "PK_BulletSpawn":
                     PK_BulletSpawn mBulletSpawn = e.ReadAs<PK_BulletSpawn>();
-                    GameMultiplayerPrairieKing.CowboyBullet bullet = new(PK_game, mBulletSpawn.position, mBulletSpawn.motion, mBulletSpawn.damage);
+                    Bullet bullet = new(PK_game, mBulletSpawn.position, mBulletSpawn.motion, mBulletSpawn.damage);
 
                     if (mBulletSpawn.isFriendly)
                         PK_game.bullets.Add(bullet);
@@ -312,19 +313,19 @@ namespace MultiPlayerPrairie
 
                     if (mEnemySpawn.isOutlaw)
                     {
-                        GameMultiplayerPrairieKing.Outlaw outlaw = new(PK_game, mEnemySpawn.position, mEnemySpawn.health);
+                        Outlaw outlaw = new(PK_game, mEnemySpawn.position, mEnemySpawn.health);
                         outlaw.id = mEnemySpawn.id;
                         PK_game.monsters.Add(outlaw);
                     }
                     else if (mEnemySpawn.isDracula)
                     {
-                        GameMultiplayerPrairieKing.Dracula dracula = new(PK_game);
+                        Dracula dracula = new(PK_game);
                         dracula.id = mEnemySpawn.id;
                         PK_game.monsters.Add(dracula);
                     }
                     else
                     {
-                        GameMultiplayerPrairieKing.CowboyMonster cowbyMonster = new(PK_game, monsterType, mEnemySpawn.position);
+                        Enemy cowbyMonster = new(PK_game, monsterType, mEnemySpawn.position);
                         cowbyMonster.id = mEnemySpawn.id;
                         PK_game.monsters.Add(cowbyMonster);
                     }
@@ -335,7 +336,7 @@ namespace MultiPlayerPrairie
 
                     for (int i = PK_game.monsters.Count - 1; i >= 0; i--)
                     {
-                        GameMultiplayerPrairieKing.CowboyMonster m = PK_game.monsters[i];
+                        Enemy m = PK_game.monsters[i];
                         if (mEnemyPositions.positions.ContainsKey(m.id))
                         {
                             m.position.Location = mEnemyPositions.positions[m.id];
@@ -362,7 +363,7 @@ namespace MultiPlayerPrairie
                     //Remove the killed monster
                     for (int i = PK_game.monsters.Count - 1; i >= 0; i--)
                     {
-                        GameMultiplayerPrairieKing.CowboyMonster m = PK_game.monsters[i];
+                        Enemy m = PK_game.monsters[i];
                         if (m.id == mEnemyKilled.id)
                         {
                             m.OnDeath();
@@ -376,7 +377,7 @@ namespace MultiPlayerPrairie
                 case "PK_BulletDespawned":
                     PK_BulletDespawned mBulletDespawned = e.ReadAs<PK_BulletDespawned>();
 
-                    List<GameMultiplayerPrairieKing.CowboyBullet> bulletList = mBulletDespawned.isFriendly ? PK_game.bullets : PK_game.enemyBullets;
+                    List<Bullet> bulletList = mBulletDespawned.isFriendly ? PK_game.bullets : PK_game.enemyBullets;
                     //Remove the killed monster
                     for (int i = bulletList.Count - 1; i >= 0; i--)
                     {
