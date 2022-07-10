@@ -242,10 +242,11 @@ namespace MultiPlayerPrairie
             {
                 case "PK_PowerupSpawn":
                     PK_PowerupSpawn mPowerupSpawn = e.ReadAs<PK_PowerupSpawn>();
+                    GameMultiplayerPrairieKing.POWERUP_TYPE powerupType = (GameMultiplayerPrairieKing.POWERUP_TYPE)mPowerupSpawn.which;
                     //public CowboyPowerup(GameMultiplayerPrairieKing game, int which, Point position, int duration)
                     if (!PK_game.isHost)
                     {
-                        GameMultiplayerPrairieKing.CowboyPowerup powerup = new GameMultiplayerPrairieKing.CowboyPowerup(PK_game, mPowerupSpawn.which, mPowerupSpawn.position, mPowerupSpawn.duration);
+                        GameMultiplayerPrairieKing.CowboyPowerup powerup = new GameMultiplayerPrairieKing.CowboyPowerup(PK_game, powerupType, mPowerupSpawn.position, mPowerupSpawn.duration);
                         powerup.id = mPowerupSpawn.id;
                         PK_game.powerups.Add(powerup);
                     }
@@ -255,18 +256,18 @@ namespace MultiPlayerPrairie
                     PK_PowerupPickup mPowerupPickup = e.ReadAs<PK_PowerupPickup>();
 
                     //Coins should be given both players as value
-                    if (mPowerupPickup.which == GameMultiplayerPrairieKing.POWERUP_COIN)
+                    if (mPowerupPickup.which == (int)GameMultiplayerPrairieKing.POWERUP_TYPE.COIN)
                     {
-                        PK_game.usePowerup(GameMultiplayerPrairieKing.POWERUP_COIN);
+                        PK_game.usePowerup(GameMultiplayerPrairieKing.POWERUP_TYPE.COIN);
                     }
-                    if (mPowerupPickup.which == GameMultiplayerPrairieKing.POWERUP_NICKEL)
+                    if (mPowerupPickup.which == (int)GameMultiplayerPrairieKing.POWERUP_TYPE.NICKEL)
                     {
-                        PK_game.usePowerup(GameMultiplayerPrairieKing.POWERUP_NICKEL);
+                        PK_game.usePowerup(GameMultiplayerPrairieKing.POWERUP_TYPE.NICKEL);
                     }
                     //Health should be given both players too
-                    if (mPowerupPickup.which == GameMultiplayerPrairieKing.POWERUP_LIFE)
+                    if (mPowerupPickup.which == (int)GameMultiplayerPrairieKing.POWERUP_TYPE.LIFE)
                     {
-                        PK_game.usePowerup(GameMultiplayerPrairieKing.POWERUP_LIFE);
+                        PK_game.usePowerup(GameMultiplayerPrairieKing.POWERUP_TYPE.LIFE);
                     }
 
                     for (int i = PK_game.powerups.Count - 1; i >= 0; i--)
@@ -311,6 +312,7 @@ namespace MultiPlayerPrairie
 
                 case "PK_EnemySpawn":
                     PK_EnemySpawn mEnemySpawn = e.ReadAs<PK_EnemySpawn>();
+                    GameMultiplayerPrairieKing.MONSTER_TYPE monsterType = (GameMultiplayerPrairieKing.MONSTER_TYPE)mEnemySpawn.which;
 
                     if (mEnemySpawn.isOutlaw)
                     {
@@ -326,7 +328,7 @@ namespace MultiPlayerPrairie
                     }
                     else
                     {
-                        GameMultiplayerPrairieKing.CowboyMonster cowbyMonster = new GameMultiplayerPrairieKing.CowboyMonster(PK_game, mEnemySpawn.which, mEnemySpawn.position);
+                        GameMultiplayerPrairieKing.CowboyMonster cowbyMonster = new GameMultiplayerPrairieKing.CowboyMonster(PK_game, monsterType, mEnemySpawn.position);
                         cowbyMonster.id = mEnemySpawn.id;
                         PK_game.monsters.Add(cowbyMonster);
                     }
