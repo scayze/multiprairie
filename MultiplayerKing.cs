@@ -326,13 +326,13 @@ namespace MultiPlayerPrairie
                     PK_EnemySpawn mEnemySpawn = e.ReadAs<PK_EnemySpawn>();
                     GameMultiplayerPrairieKing.MONSTER_TYPE monsterType = (GameMultiplayerPrairieKing.MONSTER_TYPE)mEnemySpawn.which;
 
-                    if (mEnemySpawn.isOutlaw)
+                    if (mEnemySpawn.which == (int)GameMultiplayerPrairieKing.MONSTER_TYPE.outlaw)
                     {
                         Outlaw outlaw = new(PK_game, mEnemySpawn.position, mEnemySpawn.health);
                         outlaw.id = mEnemySpawn.id;
                         PK_game.monsters.Add(outlaw);
                     }
-                    else if (mEnemySpawn.isDracula)
+                    else if (mEnemySpawn.which == (int)GameMultiplayerPrairieKing.MONSTER_TYPE.dracula)
                     {
                         Dracula dracula = new(PK_game);
                         dracula.id = mEnemySpawn.id;
@@ -455,8 +455,6 @@ namespace MultiPlayerPrairie
         public long id = -69;
         public int which = 0;
         public int health = 1;
-        public bool isOutlaw = false;
-        public bool isDracula = false;
 
     }
 

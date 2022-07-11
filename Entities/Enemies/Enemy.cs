@@ -137,8 +137,6 @@ namespace MultiplayerPrairieKing.Entities
 				message.id = this.id;
 				message.which = (int)which;
 				message.position = position;
-				message.isDracula = (which == MONSTER_TYPE.dracula);
-				message.isOutlaw = (which == MONSTER_TYPE.outlaw);
 				game.modInstance.Helper.Multiplayer.SendMessage(message, "PK_EnemySpawn");
 			}
 		}
