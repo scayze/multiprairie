@@ -663,13 +663,13 @@ namespace MultiPlayerPrairie
 			switch (c.which)
 			{
 				case POWERUP_TYPE.HEART:
-					UusePowerup(POWERUP_TYPE.HEART);
+					UsePowerup(POWERUP_TYPE.HEART);
 					break;
 				case POWERUP_TYPE.SKULL:
-					UusePowerup(POWERUP_TYPE.SKULL);
+					UsePowerup(POWERUP_TYPE.SKULL);
 					break;
 				case POWERUP_TYPE.LOG:
-					UusePowerup(POWERUP_TYPE.LOG);
+					UsePowerup(POWERUP_TYPE.LOG);
 					break;
 				case POWERUP_TYPE.COIN:
 					coins++;
@@ -708,7 +708,7 @@ namespace MultiPlayerPrairie
 			return Game1.options.SnappyMenus;
 		}
 
-		public void UusePowerup(POWERUP_TYPE which)
+		public void UsePowerup(POWERUP_TYPE which)
 		{
 			if (activePowerups.ContainsKey(which))
 			{
@@ -738,9 +738,9 @@ namespace MultiPlayerPrairie
 					goto IL_00cd;
 				case POWERUP_TYPE.SHERRIFF:
 					{
-						UusePowerup(POWERUP_TYPE.SHOTGUN);
-						UusePowerup(POWERUP_TYPE.RAPIDFIRE);
-						UusePowerup(POWERUP_TYPE.SPEED);
+						UsePowerup(POWERUP_TYPE.SHOTGUN);
+						UsePowerup(POWERUP_TYPE.RAPIDFIRE);
+						UsePowerup(POWERUP_TYPE.SPEED);
 						for (int j = 0; j < activePowerups.Count; j++)
 						{
 							activePowerups[activePowerups.ElementAt(j).Key] *= 2;
@@ -1719,7 +1719,7 @@ namespace MultiPlayerPrairie
 
 							if (heldItem != null)
 							{
-								UusePowerup(powerups[i7].which);
+								UsePowerup(powerups[i7].which);
 								powerups.RemoveAt(i7);
 							}
 							else if (GetPowerUp(powerups[i7]))
@@ -2403,7 +2403,7 @@ namespace MultiPlayerPrairie
 			}
 			if (_buttonHeldFrames[GameKeys.UsePowerup] == 1 && !gameOver && heldItem != null && deathTimer <= 0f && zombieModeTimer <= 0)
 			{
-				UusePowerup(heldItem.which);
+				UsePowerup(heldItem.which);
 				heldItem = null;
 			}
 			if (_buttonHeldFrames[GameKeys.Exit] == 1)

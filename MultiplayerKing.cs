@@ -256,16 +256,16 @@ namespace MultiPlayerPrairie
                     //Coins should be given both players as value
                     if (mPowerupPickup.which == (int)GameMultiplayerPrairieKing.POWERUP_TYPE.COIN)
                     {
-                        PK_game.UusePowerup(GameMultiplayerPrairieKing.POWERUP_TYPE.COIN);
+                        PK_game.UsePowerup(GameMultiplayerPrairieKing.POWERUP_TYPE.COIN);
                     }
                     if (mPowerupPickup.which == (int)GameMultiplayerPrairieKing.POWERUP_TYPE.NICKEL)
                     {
-                        PK_game.UusePowerup(GameMultiplayerPrairieKing.POWERUP_TYPE.NICKEL);
+                        PK_game.UsePowerup(GameMultiplayerPrairieKing.POWERUP_TYPE.NICKEL);
                     }
                     //Health should be given both players too
                     if (mPowerupPickup.which == (int)GameMultiplayerPrairieKing.POWERUP_TYPE.LIFE)
                     {
-                        PK_game.UusePowerup(GameMultiplayerPrairieKing.POWERUP_TYPE.LIFE);
+                        PK_game.UsePowerup(GameMultiplayerPrairieKing.POWERUP_TYPE.LIFE);
                     }
 
                     for (int i = PK_game.powerups.Count - 1; i >= 0; i--)
