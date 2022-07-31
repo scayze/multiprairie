@@ -372,6 +372,10 @@ namespace MultiPlayerPrairie
                     PK_game.StartLevelTransition();
                     break;
 
+                case "PK_StartGopherTrain":
+                    PK_game.StartGopherTrain();
+                    break;
+
                 case "PK_EnemyKilled":
                     PK_EnemyKilled mEnemyKilled = e.ReadAs<PK_EnemyKilled>();
 
@@ -499,6 +503,11 @@ namespace MultiPlayerPrairie
     }
 
     public class PK_JoinLobby
+    {
+
+    }
+
+    public class PK_StartGopherTrain
     {
 
     }

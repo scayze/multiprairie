@@ -715,7 +715,7 @@ namespace MultiPlayerPrairie
 				activePowerups[which] = powerupDuration + 2000;
 				return;
 			}
-			ITEM_TYPE num;
+
 			switch (which)
 			{
 				case POWERUP_TYPE.HEART:
@@ -731,11 +731,19 @@ namespace MultiPlayerPrairie
 					}
 					break;
 				case POWERUP_TYPE.SKULL:
-					num = ITEM_TYPE.SKULL;
-					goto IL_00cd;
+					//NET Start Gopher Train
+					PK_StartGopherTrain mStartTrainSkull = new();
+					modInstance.Helper.Multiplayer.SendMessage(mStartTrainSkull, "PK_StartGopherTrain");
+
+					StartGopherTrain(ITEM_TYPE.SKULL);
+					break;
 				case POWERUP_TYPE.LOG:
-					num = ITEM_TYPE.LOG;
-					goto IL_00cd;
+					//NET Start Gopher Train
+					PK_StartGopherTrain mStartTrainLog = new();
+					modInstance.Helper.Multiplayer.SendMessage(mStartTrainLog, "PK_StartGopherTrain");
+
+					StartGopherTrain(ITEM_TYPE.LOG);
+					break;
 				case POWERUP_TYPE.SHERRIFF:
 					{
 						UsePowerup(POWERUP_TYPE.SHOTGUN);
@@ -857,18 +865,24 @@ namespace MultiPlayerPrairie
 						Game1.playSound("cowboy_powerup");
 						break;
 					}
-				IL_00cd:
-					itemToHold = num;
-					holdItemTimer = 2000;
-					Game1.playSound("Cowboy_Secret");
-					gopherTrain = true;
-					gopherTrainPosition = -TileSize * 2;
-					break;
 			}
 			if (whichRound > 0 && activePowerups.ContainsKey(which))
 			{
 				activePowerups[which] /= 2;
 			}
+		}
+
+		public void StartGopherTrain(ITEM_TYPE item = ITEM_TYPE.NONE)
+        {
+			if(item != ITEM_TYPE.NONE)
+            {
+				itemToHold = item;
+				
+			}
+			holdItemTimer = 2000;
+			Game1.playSound("Cowboy_Secret");
+			gopherTrain = true;
+			gopherTrainPosition = -TileSize * 2;
 		}
 
 		public void AddGuts(Point position, MONSTER_TYPE whichGuts)
