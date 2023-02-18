@@ -36,7 +36,7 @@ namespace MultiPlayerPrairie
 			MAX
 		}
 
-		public void NETskipLevel()
+		public void NETskipLevel(int toLevel = -1)
         {
 			//Cant skip level as non host, i think
 			if (!isHost)
@@ -54,8 +54,9 @@ namespace MultiPlayerPrairie
 			monsters.Clear();
 			
 
-			OnCompleteLevel();
+			OnCompleteLevel(toLevel);
 			PK_CompleteLevel completeLevel = new();
+			completeLevel.toLevel = toLevel;
 			modInstance.Helper.Multiplayer.SendMessage(completeLevel, "PK_CompleteLevel");
         }
 
@@ -2231,12 +2232,20 @@ namespace MultiPlayerPrairie
 			return false;
 		}
 
-		public void OnCompleteLevel()
+		public void OnCompleteLevel(int level = -1)
         {
 			hasGopherAppeared = false;
 			waveTimer = 80000;
 			betweenWaveTimer = 3333;
-			whichWave++;
+			if(level == -1)
+            {
+				whichWave++;
+			}
+			else
+            {
+				whichWave = level;
+            }
+			
 
 			switch (whichWave)
 			{
@@ -3010,8 +3019,8 @@ namespace MultiPlayerPrairie
 						b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + player2Position + new Vector2(0f, -TileSize / 4), new Rectangle(224 + facingDirection2 * 16, 1712, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, player2Position.Y / 10000f + 0.002f + 0.001f);
 					}
 
-					player2ShootingDirections.Clear();
-					player2MovementDirections.Clear();
+					//player2ShootingDirections.Clear();
+					//player2MovementDirections.Clear();
 				}
 
 				//Draw all temporary sprites

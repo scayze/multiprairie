@@ -116,6 +116,14 @@ namespace MultiPlayerPrairie
                 original: AccessTools.Method(typeof(GameLocation), nameof(GameLocation.showPrairieKingMenu)),
                 prefix: new HarmonyMethod(typeof(GameLocationPatches), nameof(GameLocationPatches.ShowPrairieKingMenu_Prefix))
             );
+
+            helper.ConsoleCommands.Add("ok_SetStage", "Sets the new stage of prairie king.", this.SkipToStage);
+        }
+
+        private void SkipToStage(string command, string[] args)
+        {
+            GameMultiplayerPrairieKing PK_game = (GameMultiplayerPrairieKing)Game1.currentMinigame;
+            PK_game.NETskipLevel(int.Parse(args[0]));
         }
 
 
@@ -144,6 +152,7 @@ namespace MultiPlayerPrairie
                 //showArcadeDialogue();
             }
 
+            /*
             if (e.Button == SButton.K)
             {
                 if (Game1.currentMinigame != null)
@@ -152,6 +161,7 @@ namespace MultiPlayerPrairie
                 }
                 Game1.currentMinigame = new GameMultiplayerPrairieKing(this, true, true);
             }
+            
 
 
             if (e.Button == SButton.RightShoulder)
@@ -162,6 +172,7 @@ namespace MultiPlayerPrairie
                 }
                 Game1.currentMinigame = new GameMultiplayerPrairieKing(this, false, true);
             }
+            */
         }
 
         static public void HostDialogueSet(Farmer who, string dialogue_id)
@@ -365,7 +376,8 @@ namespace MultiPlayerPrairie
                     break;
 
                 case "PK_CompleteLevel":
-                    PK_game.OnCompleteLevel();
+                    PK_CompleteLevel mCompletLevel = e.ReadAs<PK_CompleteLevel>();
+                    PK_game.OnCompleteLevel(mCompletLevel.toLevel);
                     break;
 
                 case "PK_StartLevelTransition":
@@ -477,7 +489,7 @@ namespace MultiPlayerPrairie
     //Level Sync
     public class PK_CompleteLevel
     {
-
+        public int toLevel = -1;
     }
 
     public class PK_ExitGame

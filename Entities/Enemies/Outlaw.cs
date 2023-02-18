@@ -68,7 +68,17 @@ namespace MultiplayerPrairieKing.Entities.Enemies
 				b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(position.X, position.Y), new Rectangle(560 + ((phaseCountdown / 250 % 2 == 0) ? 16 : 0), 1776, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, (float)position.Y / 10000f + 0.001f);
 				if (phase == -1 && phaseCountdown > 1000)
 				{
-					b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(position.X - TileSize / 2, position.Y - TileSize * 2), new Rectangle(576 + ((gameInstance.whichWave > 5) ? 32 : 0), 1792, 32, 32), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, (float)position.Y / 10000f + 0.001f);
+					b.Draw(
+						Game1.mouseCursors,
+						topLeftScreenCoordinate + new Vector2(position.X - TileSize / 2, position.Y - TileSize * 2),
+						new Rectangle(576 + ((gameInstance.whichWave > 5) ? 32 : 0), 1792, 32, 32),
+						Color.White,
+						0f,
+						Vector2.Zero,
+						3f,
+						SpriteEffects.None,
+						(float)position.Y / 10000f + 0.001f
+					);
 				}
 			}
 			else if (phase == 3 && phaseInternalCounter == 2)
