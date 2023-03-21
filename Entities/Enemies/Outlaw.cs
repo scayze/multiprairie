@@ -365,7 +365,7 @@ namespace MultiplayerPrairieKing.Entities.Enemies
 			{
 				outlawSong.Stop(AudioStopOptions.Immediate);
 			}
-			gameInstance.map[8, 8] = 10;
+			gameInstance.map[8, 8] = MAP_TILE.BRIDGE;
 			gameInstance.screenFlash = 200;
 			for (int i = 0; i < 15; i++)
 			{

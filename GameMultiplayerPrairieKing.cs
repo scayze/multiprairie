@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using MultiplayerPrairieKing;
 using MultiplayerPrairieKing.Entities;
 using MultiplayerPrairieKing.Entities.Enemies;
 using MultiplayerPrairieKing.Helpers;
@@ -141,20 +142,6 @@ namespace MultiPlayerPrairie
 		public const int playerFootStepDelay = 200;
 
 		public const int deathDelay = 3000;
-
-		public enum MAP_TILE
-        {
-			MAP_BARRIER1 = 0,
-			MAP_BARRIER2 = 1,
-			MAP_ROCKY1 = 2,
-			MAP_DESERT = 3,
-			MAP_GRASSY = 4,
-			MAP_CACTUS = 5,
-			MAP_FENCE = 7,
-			MAP_TRENCH1 = 8,
-			MAP_TRENCH2 = 9,
-			MAP_BRIDGE = 10
-		}
 
 		public enum MONSTER_TYPE
 		{
@@ -298,9 +285,9 @@ namespace MultiPlayerPrairie
 
 		public List<Bullet> enemyBullets = new();
 
-		public int[,] map = new int[16, 16];
+		public MAP_TILE[,] map = new MAP_TILE[16, 16];
 
-		public int[,] nextMap = new int[16, 16];
+		public MAP_TILE[,] nextMap = new MAP_TILE[16, 16];
 
 		public class SpawnTask
         {
@@ -608,19 +595,19 @@ namespace MultiPlayerPrairie
 				{
 					if ((k == 0 || k == 15 || i == 0 || i == 15) && (k <= 6 || k >= 10) && (i <= 6 || i >= 10))
 					{
-						map[k, i] = 5;
+						map[k, i] = MAP_TILE.CACTUS;
 					}
 					else if (k == 0 || k == 15 || i == 0 || i == 15)
 					{
-						map[k, i] = ((Game1.random.NextDouble() < 0.15) ? 1 : 0);
+						map[k, i] = (MAP_TILE)((Game1.random.NextDouble() < 0.15) ? 1 : 0);
 					}
 					else if (k == 1 || k == 14 || i == 1 || i == 14)
 					{
-						map[k, i] = 2;
+						map[k, i] = MAP_TILE.GRAVEL;
 					}
 					else
 					{
-						map[k, i] = ((Game1.random.NextDouble() < 0.1) ? 4 : 3);
+						map[k, i] = (MAP_TILE)((Game1.random.NextDouble() < 0.1) ? 4 : 3);
 					}
 				}
 			}
@@ -961,7 +948,7 @@ namespace MultiPlayerPrairie
 
 					bullets.RemoveAt(m);
 				}
-				else if (map[bullets[m].position.X / 16 / 3, bullets[m].position.Y / 16 / 3] == 7)
+				else if (map[bullets[m].position.X / 16 / 3, bullets[m].position.Y / 16 / 3] == MAP_TILE.FENCE)
 				{
 					//NET Despawn Bullet
 					PK_BulletDespawned mBulletDespawned = new();
@@ -1047,7 +1034,7 @@ namespace MultiPlayerPrairie
 
 						enemyBullets.RemoveAt(l);
 					}
-					else if (map[(enemyBullets[l].position.X + 6) / 16 / 3, (enemyBullets[l].position.Y + 6) / 16 / 3] == 7)
+					else if (map[(enemyBullets[l].position.X + 6) / 16 / 3, (enemyBullets[l].position.Y + 6) / 16 / 3] == MAP_TILE.FENCE)
 					{
 						//NET Despawn Bullet
 						PK_BulletDespawned mBulletDespawned = new();
@@ -1773,12 +1760,12 @@ namespace MultiPlayerPrairie
 						{
 							merchantShopOpen = true;
 							Game1.playSound("cowboy_monsterhit");
-							map[8, 15] = 3;
-							map[7, 15] = 3;
-							map[7, 15] = 3;
-							map[8, 14] = 3;
-							map[7, 14] = 3;
-							map[7, 14] = 3;
+							map[8, 15] = MAP_TILE.SAND;
+							map[7, 15] = MAP_TILE.SAND;
+							map[7, 15] = MAP_TILE.SAND;
+							map[8, 14] = MAP_TILE.SAND;
+							map[7, 14] = MAP_TILE.SAND;
+							map[7, 14] = MAP_TILE.SAND;
 							shoppingCarpetNoPickup = new Rectangle(merchantBox.X - TileSize, merchantBox.Y + TileSize, TileSize * 3, TileSize * 2);
 						}
 					}
@@ -2328,9 +2315,9 @@ namespace MultiPlayerPrairie
 			else if (whichWave > 0)
 			{
 				waitingForPlayerToMoveDownAMap = true;
-				map[8, 15] = 3;
-				map[7, 15] = 3;
-				map[9, 15] = 3;
+				map[8, 15] = MAP_TILE.SAND;
+				map[7, 15] = MAP_TILE.SAND;
+				map[9, 15] = MAP_TILE.SAND;
 			}
 		}
 
@@ -2687,7 +2674,7 @@ namespace MultiPlayerPrairie
 			return true;
 		}
 
-		public static bool IsMapTilePassable(int tileType)
+		public static bool IsMapTilePassable(MAP_TILE tileType)
 		{
 			if ((uint)tileType <= 1u || (uint)(tileType - 5) <= 4u)
 			{
@@ -2696,9 +2683,9 @@ namespace MultiPlayerPrairie
 			return true;
 		}
 
-		public static bool IsMapTilePassableForMonsters(int tileType)
+		public static bool IsMapTilePassableForMonsters(MAP_TILE tileType)
 		{
-			if (tileType == 5 || (uint)(tileType - 7) <= 2u)
+			if (tileType == MAP_TILE.CACTUS || (uint)(tileType - 7) <= 2u)
 			{
 				return false;
 			}
@@ -2922,11 +2909,11 @@ namespace MultiPlayerPrairie
 					case 2:
 					case 3:
 						{
-							for (int k = 0; k < 16; k++)
+							for (int x = 0; x < 16; x++)
 							{
-								for (int l = 0; l < 16; l++)
+								for (int y = 0; y < 16; y++)
 								{
-									b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(k, l) * 16f * 3f + new Vector2(0f, newMapPosition - 16 * TileSize), new Rectangle(464 + 16 * map[k, l] + ((map[k, l] == 5 && cactusDanceTimer > 800f) ? 16 : 0), 1680 - world * 16, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 0f);
+									b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(x, y) * 16f * 3f + new Vector2(0f, newMapPosition - 16 * TileSize), new Rectangle(464 + 16 * (int)map[x, y] + ((map[x, y] == MAP_TILE.CACTUS && cactusDanceTimer > 800f) ? 16 : 0), 1680 - world * 16, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 0f);
 								}
 							}
 							b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(6 * TileSize, 3 * TileSize), new Rectangle(288, 1697, 64, 80), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 0.01f);
@@ -2963,20 +2950,20 @@ namespace MultiPlayerPrairie
 					b.End();
 					return;
 				}
-				for (int m = 0; m < 16; m++)
+				for (int x = 0; x < 16; x++)
 				{
-					for (int i = 0; i < 16; i++)
+					for (int y = 0; y < 16; y++)
 					{
-						b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(m, i) * 16f * 3f + new Vector2(0f, newMapPosition - 16 * TileSize), new Rectangle(464 + 16 * map[m, i] + ((map[m, i] == 5 && cactusDanceTimer > 800f) ? 16 : 0), 1680 - world * 16, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 0f);
+						b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(x, y) * 16f * 3f + new Vector2(0f, newMapPosition - 16 * TileSize), new Rectangle(464 + 16 * (int)map[x, y] + ((map[x, y] == MAP_TILE.CACTUS && cactusDanceTimer > 800f) ? 16 : 0), 1680 - world * 16, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 0f);
 					}
 				}
 				if (scrollingMap)
 				{
-					for (int n = 0; n < 16; n++)
+					for (int x = 0; x < 16; x++)
 					{
-						for (int j2 = 0; j2 < 16; j2++)
+						for (int y = 0; y < 16; y++)
 						{
-							b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(n, j2) * 16f * 3f + new Vector2(0f, newMapPosition), new Rectangle(464 + 16 * nextMap[n, j2] + ((nextMap[n, j2] == 5 && cactusDanceTimer > 800f) ? 16 : 0), 1680 - world * 16, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 0f);
+							b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(x, y) * 16f * 3f + new Vector2(0f, newMapPosition), new Rectangle(464 + 16 * (int)nextMap[x, y] + ((nextMap[x, y] == MAP_TILE.CACTUS && cactusDanceTimer > 800f) ? 16 : 0), 1680 - world * 16, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 0f);
 						}
 					}
 					b.Draw(Game1.staminaRect, new Rectangle((int)topLeftScreenCoordinate.X, -1, 16 * TileSize, (int)topLeftScreenCoordinate.Y), Game1.staminaRect.Bounds, Color.Black, 0f, Vector2.Zero, SpriteEffects.None, 1f);
