@@ -117,7 +117,7 @@ namespace MultiPlayerPrairie
                 prefix: new HarmonyMethod(typeof(GameLocationPatches), nameof(GameLocationPatches.ShowPrairieKingMenu_Prefix))
             );
 
-            helper.ConsoleCommands.Add("ok_SetStage", "Sets the new stage of prairie king.", this.SkipToStage);
+            helper.ConsoleCommands.Add("pk_SetStage", "Sets the new stage of prairie king.", this.SkipToStage);
         }
 
         private void SkipToStage(string command, string[] args)
