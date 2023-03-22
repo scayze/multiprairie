@@ -390,8 +390,6 @@ namespace MultiPlayerPrairie
 
 		public bool store;
 
-		public bool merchantLeaving;
-
 		public bool merchantArriving;
 
 		public bool merchantShopOpen;
@@ -555,7 +553,6 @@ namespace MultiPlayerPrairie
 			holdItemTimer = 0;
 			itemToHold = ITEM_TYPE.NONE;
 			merchantArriving = false;
-			merchantLeaving = false;
 			merchantShopOpen = false;
 			monsterConfusionTimer = 0;
 			monsters.Clear();
@@ -1159,7 +1156,6 @@ namespace MultiPlayerPrairie
 			SaveGame();
 			shopping = false;
 			merchantArriving = false;
-			merchantLeaving = false;
 			merchantShopOpen = false;
 			merchantBox.Y = -TileSize;
 			scrollingMap = true;
@@ -1529,7 +1525,7 @@ namespace MultiPlayerPrairie
 					SaveGame();
 				}
 			}
-			if ((shopping || merchantArriving || merchantLeaving || waitingForPlayerToMoveDownAMap) && holdItemTimer <= 0)
+			if ((shopping || merchantArriving || waitingForPlayerToMoveDownAMap) && holdItemTimer <= 0)
 			{
 				int oldTimer = shoppingTimer;
 				shoppingTimer += time.ElapsedGameTime.Milliseconds;
@@ -1769,16 +1765,6 @@ namespace MultiPlayerPrairie
 							shoppingCarpetNoPickup = new Rectangle(merchantBox.X - TileSize, merchantBox.Y + TileSize, TileSize * 3, TileSize * 2);
 						}
 					}
-					else if (merchantLeaving)
-					{
-						merchantBox.Y -= 2;
-						if (merchantBox.Y <= -TileSize)
-						{
-							shopping = false;
-							merchantLeaving = false;
-							merchantArriving = true;
-						}
-					}
 					else if (merchantShopOpen)
 					{
 						for (int i8 = storeItems.Count - 1; i8 >= 0; i8--)
@@ -1790,7 +1776,6 @@ namespace MultiPlayerPrairie
 								motionPause = 2500;
 								itemToHold = storeItems.ElementAt(i8).Value;
 								storeItems.Remove(storeItems.ElementAt(i8).Key);
-								merchantLeaving = true;
 								merchantArriving = false;
 								merchantShopOpen = false;
 								coins -= GetPriceForItem(itemToHold);
@@ -2144,11 +2129,12 @@ namespace MultiPlayerPrairie
 				}
 				for (int i = monsters.Count - 1; i >= 0; i--)
 				{
-					//TODO: Target closest player, for now: Target host
-					if(isHost)
-						monsters[i].Move(playerPosition, time);
-					else
-						monsters[i].Move(player2Position, time);
+					// Target the closest player
+					float dist1 = (playerPosition - monsters[i].position.Location.ToVector2()).LengthSquared();
+					float dist2 = (player2Position - monsters[i].position.Location.ToVector2()).LengthSquared();
+
+					Vector2 targetPosition = dist1 <= dist2 ? playerPosition : player2Position;
+					monsters[i].Move(targetPosition, time);
 
 
 					if (i < monsters.Count && monsters[i].position.Intersects(playerBoundingBox) && playerInvincibleTimer <= 0)
@@ -2784,7 +2770,6 @@ namespace MultiPlayerPrairie
 			merchantBox.Y = -TileSize;
 			shopping = true;
 			merchantArriving = true;
-			merchantLeaving = false;
 			merchantShopOpen = false;
 			if (overworldSong != null)
 			{
@@ -3035,7 +3020,7 @@ namespace MultiPlayerPrairie
 				//Draw shop
 				if (shopping)
 				{
-					if ((merchantArriving || merchantLeaving) && !merchantShopOpen)
+					if ((merchantArriving) && !merchantShopOpen)
 					{
 						b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(merchantBox.Location.X, merchantBox.Location.Y), new Rectangle(464 + ((shoppingTimer / 100 % 2 == 0) ? 16 : 0), 1728, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, (float)merchantBox.Y / 10000f + 0.001f);
 					}
@@ -3053,7 +3038,7 @@ namespace MultiPlayerPrairie
 						}
 					}
 				}
-				if (waitingForPlayerToMoveDownAMap && (merchantShopOpen || merchantLeaving || !shopping) && shoppingTimer < 250)
+				if (waitingForPlayerToMoveDownAMap && (merchantShopOpen || !shopping) && shoppingTimer < 250)
 				{
 					b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(8.5f, 15f) * TileSize + new Vector2(-12f, 0f), new Rectangle(355, 1750, 8, 8), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 0.001f);
 				}

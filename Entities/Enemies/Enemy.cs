@@ -258,7 +258,7 @@ namespace MultiplayerPrairieKing.Entities
 				case MONSTER_TYPE.mummy:
 				case MONSTER_TYPE.mushroom:
 				case MONSTER_TYPE.spikey:
-					{
+					{     
 						if (type == MONSTER_TYPE.spikey)
 						{
 							if (special || invisible)
