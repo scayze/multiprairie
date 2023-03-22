@@ -118,6 +118,13 @@ namespace MultiPlayerPrairie
             );
 
             helper.ConsoleCommands.Add("pk_SetStage", "Sets the new stage of prairie king.", this.SkipToStage);
+            helper.ConsoleCommands.Add("pk_SetCoints", "Sets the amount of coins the player has in prairie king.", this.SetCoins);
+        }
+
+        private void SetCoins(string command, string[] args)
+        {
+            GameMultiplayerPrairieKing PK_game = (GameMultiplayerPrairieKing)Game1.currentMinigame;
+            PK_game.coins = int.Parse(args[0]);
         }
 
         private void SkipToStage(string command, string[] args)
@@ -375,6 +382,10 @@ namespace MultiPlayerPrairie
                     }
                     break;
 
+                case "PK_SpikeyTransform":
+
+                    break;
+
                 case "PK_CompleteLevel":
                     PK_CompleteLevel mCompletLevel = e.ReadAs<PK_CompleteLevel>();
                     PK_game.OnCompleteLevel(mCompletLevel.toLevel);
@@ -477,6 +488,11 @@ namespace MultiPlayerPrairie
     public class PK_EnemyKilled
     {
         public long dick = 69; //Haha
+        public long id = -69;
+    }
+
+    public class PK_SpikeyTransform
+    {
         public long id = -69;
     }
 
