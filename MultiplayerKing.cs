@@ -299,13 +299,13 @@ namespace MultiPlayerPrairie
                 case "PK_PlayerMove":
                     PK_PlayerMove mPlayerMove = e.ReadAs<PK_PlayerMove>();
 
-                    PK_game.player2MovementDirections = mPlayerMove.movementDirections;
-                    PK_game.player2ShootingDirections = mPlayerMove.shootingDirections;
-                    PK_game.player2Position = mPlayerMove.position;
-                    PK_game.player2BoundingBox.X = (int)PK_game.player2Position.X + GameMultiplayerPrairieKing.TileSize / 4;
-                    PK_game.player2BoundingBox.Y = (int)PK_game.player2Position.Y + GameMultiplayerPrairieKing.TileSize / 4;
-                    PK_game.player2BoundingBox.Width = GameMultiplayerPrairieKing.TileSize / 2;
-                    PK_game.player2BoundingBox.Height = GameMultiplayerPrairieKing.TileSize / 2;
+                    PK_game.player2.movementDirections = mPlayerMove.movementDirections;
+                    PK_game.player2.shootingDirections = mPlayerMove.shootingDirections;
+                    PK_game.player2.position = mPlayerMove.position;
+                    PK_game.player2.boundingBox.X = (int)PK_game.player2.position.X + GameMultiplayerPrairieKing.TileSize / 4;
+                    PK_game.player2.boundingBox.Y = (int)PK_game.player2.position.Y + GameMultiplayerPrairieKing.TileSize / 4;
+                    PK_game.player2.boundingBox.Width = GameMultiplayerPrairieKing.TileSize / 2;
+                    PK_game.player2.boundingBox.Height = GameMultiplayerPrairieKing.TileSize / 2;
 
                     break;
 
@@ -316,26 +316,20 @@ namespace MultiPlayerPrairie
 
                 case "PK_BulletSpawn":
                     PK_BulletSpawn mBulletSpawn = e.ReadAs<PK_BulletSpawn>();
-                    Bullet bullet = new(PK_game, mBulletSpawn.position, mBulletSpawn.motion, mBulletSpawn.damage);
+                    Bullet bullet = new(PK_game, mBulletSpawn.isFriendly, mBulletSpawn.position, mBulletSpawn.motion, mBulletSpawn.damage);
                     bullet.id = mBulletSpawn.id;
-
-                    if (mBulletSpawn.isFriendly)
-                        PK_game.bullets.Add(bullet);
-                    else
-                        PK_game.enemyBullets.Add(bullet);
-
+                    PK_game.bullets.Add(bullet);
                     break;
 
                 case "PK_BulletDespawned":
                     PK_BulletDespawned mBulletDespawned = e.ReadAs<PK_BulletDespawned>();
 
-                    List<Bullet> bulletList = mBulletDespawned.isFriendly ? PK_game.bullets : PK_game.enemyBullets;
                     //Remove the killed monster
-                    for (int i = bulletList.Count - 1; i >= 0; i--)
+                    for (int i = PK_game.bullets.Count - 1; i >= 0; i--)
                     {
-                        if (bulletList[i].id == mBulletDespawned.id)
+                        if (PK_game.bullets[i].id == mBulletDespawned.id)
                         {
-                            bulletList.RemoveAt(i);
+                            PK_game.bullets.RemoveAt(i);
                         }
                     }
                     break;

@@ -63,13 +63,8 @@ namespace MultiPlayerPrairie
 
 		public void NETspawnBullet(bool friendly, Point position, Point motion, int damage)
 		{
-			Bullet bullet = new(this, position, motion, damage);
-
-			if (friendly)
-				bullets.Add(bullet);
-			else
-				enemyBullets.Add(bullet);
-
+			Bullet bullet = new(this, friendly, position, motion, damage);
+			bullets.Add(bullet);
 
 			//NET Spawn Bullet
 			PK_BulletSpawn mBullet = new();
@@ -83,13 +78,8 @@ namespace MultiPlayerPrairie
 
 		public void NETspawnBullet(bool friendly, Point position, int direction, int damage)
 		{
-			Bullet bullet = new(this, position, direction, damage);
-
-			if (friendly)
-				bullets.Add(bullet);
-			else
-				enemyBullets.Add(bullet);
-
+			Bullet bullet = new(this, friendly, position, direction, damage);
+			bullets.Add(bullet);
 
 			//NET Spawn Bullet
 			PK_BulletSpawn mBullet = new();
@@ -106,9 +96,15 @@ namespace MultiPlayerPrairie
 			PK_PlayerMove message = new();
 			message.position = pos;
 			message.id = Game1.player.UniqueMultiplayerID;
-			message.shootingDirections = playerShootingDirections;
-			message.movementDirections = playerMovementDirections;
+			message.shootingDirections = player1.shootingDirections;
+			message.movementDirections = player1.movementDirections;
 			modInstance.Helper.Multiplayer.SendMessage(message, "PK_PlayerMove");
+        }
+
+		public void NETspawnPowerup()
+        {
+			PK_PowerupSpawn mPowerup = new();
+			modInstance.Helper.Multiplayer.SendMessage(mPowerup, "PK_PowerupSpawn");
         }
 
 		public ModMultiPlayerPrairieKing modInstance;
@@ -204,22 +200,9 @@ namespace MultiPlayerPrairie
 			QUIT = 1
 		}
 
-		//Unused. for potential future refactor
-		public class Player
-		{
-			public int runSpeedLevel;
-			public int fireSpeedLevel;
-			public int ammoLevel;
-			public Vector2 position;
-			public Rectangle boundingBox;
-			public int shotTimer;
-			public int bulletDamage;
+		public Player player1;
 
-			public List<int> movementDirections = new();
-			public List<int> shootingDirections = new();
-
-		}
-
+		public Player player2;
 
 		public int runSpeedLevel;
 
@@ -239,29 +222,9 @@ namespace MultiPlayerPrairie
 
 		protected HashSet<Vector2> _borderTiles = new();
 
-		public Vector2 playerPosition;
-
-		public Vector2 player2Position;
-
-        public Rectangle playerBoundingBox;
-
 		public Rectangle merchantBox;
 
-		public Rectangle player2BoundingBox;
-
 		public Rectangle noPickUpBox;
-
-		public List<int> playerMovementDirections = new();
-
-		public List<int> playerShootingDirections = new();
-		
-		public List<int> player2MovementDirections = new();
-
-		public List<int> player2ShootingDirections = new();
-
-		public int shootingDelay = 300;
-
-		public int shotTimer;
 
 		public int motionPause;
 
@@ -277,13 +240,7 @@ namespace MultiPlayerPrairie
 
 		public int score;
 
-		public int player2deathtimer;
-
-		public int player2invincibletimer;
-
 		public List<Bullet> bullets = new();
-
-		public List<Bullet> enemyBullets = new();
 
 		public MAP_TILE[,] map = new MAP_TILE[16, 16];
 
@@ -311,9 +268,7 @@ namespace MultiPlayerPrairie
 
 		public float cactusDanceTimer;
 
-		public float playerMotionAnimationTimer;
 
-		public float playerFootstepSoundTimer = 200f;
 
 		public behaviorAfterMotionPause behaviorAfterPause;
 
@@ -344,10 +299,6 @@ namespace MultiPlayerPrairie
 
 		public int gamerestartTimer;
 
-		public int player2TargetUpdateTimer;
-
-		public int player2AnimationTimer;
-
 		public int fadethenQuitTimer;
 
 		public int waveTimer = 80000;
@@ -362,13 +313,7 @@ namespace MultiPlayerPrairie
 
 		public int shoppingTimer;
 
-		public int holdItemTimer;
-
-		public ITEM_TYPE itemToHold;
-
 		public int newMapPosition;
-
-		public int playerInvincibleTimer;
 
 		public int screenFlash;
 
@@ -379,8 +324,6 @@ namespace MultiPlayerPrairie
 		public int endCutscenePhase;
 
 		public int startTimer;
-
-		public float deathTimer;
 
 		public bool onStartMenu;
 
@@ -432,8 +375,6 @@ namespace MultiPlayerPrairie
 
 		protected Dictionary<GameKeys, int> _buttonHeldFrames;
 
-		private int player2FootstepSoundTimer;
-
 		public static int TileSize => 48;
 
 		public bool LoadGame()
@@ -468,7 +409,7 @@ namespace MultiPlayerPrairie
 			ApplyLevelSpecificStates();
 			if (shootoutLevel)
 			{
-				playerPosition = new Vector2(8 * TileSize, 3 * TileSize);
+				player1.position = new Vector2(8 * TileSize, 3 * TileSize);
 			}
 			return true;
 		}
@@ -549,9 +490,6 @@ namespace MultiPlayerPrairie
 			_borderTiles = new HashSet<Vector2>(Utility.getBorderOfThisRectangle(r));
 			died = false;
 			topLeftScreenCoordinate = new Vector2(Game1.viewport.Width / 2 - 384, Game1.viewport.Height / 2 - 384);
-			enemyBullets.Clear();
-			holdItemTimer = 0;
-			itemToHold = ITEM_TYPE.NONE;
 			merchantArriving = false;
 			merchantShopOpen = false;
 			monsterConfusionTimer = 0;
@@ -566,62 +504,60 @@ namespace MultiPlayerPrairie
 			whichWave = 0;
 			zombieModeTimer = 0;
 			bulletDamage = 1;
-			deathTimer = 0f;
 			shootoutLevel = false;
 			betweenWaveTimer = 5000;
 			gopherRunning = false;
 			hasGopherAppeared = false;
-			playerMovementDirections.Clear();
+			player1 = new(this, isSelf: true);
+			player2 = new(this, isSelf: false);
 			outlawSong = null;
 			overworldSong = null;
 			endCutscene = false;
 			endCutscenePhase = 0;
 			endCutsceneTimer = 0;
 			gameOver = false;
-			deathTimer = 0f;
-			playerInvincibleTimer = 0;
 			playingWithAbigail = playingWithAbby;
 			onStartMenu = true;
 			startTimer = 0;
 			powerups.Clear();
 			world = 0;
 			Game1.changeMusicTrack("none", track_interruptable: false, Game1.MusicContext.MiniGame);
-			for (int k = 0; k < 16; k++)
+			for (int x = 0; x < 16; x++)
 			{
-				for (int i = 0; i < 16; i++)
+				for (int y = 0; y < 16; y++)
 				{
-					if ((k == 0 || k == 15 || i == 0 || i == 15) && (k <= 6 || k >= 10) && (i <= 6 || i >= 10))
+					if ((x == 0 || x == 15 || y == 0 || y == 15) && (x <= 6 || x >= 10) && (y <= 6 || y >= 10))
 					{
-						map[k, i] = MAP_TILE.CACTUS;
+						map[x, y] = MAP_TILE.CACTUS;
 					}
-					else if (k == 0 || k == 15 || i == 0 || i == 15)
+					else if (x == 0 || x == 15 || y == 0 || y == 15)
 					{
-						map[k, i] = (MAP_TILE)((Game1.random.NextDouble() < 0.15) ? 1 : 0);
+						map[x, y] = (MAP_TILE)((Game1.random.NextDouble() < 0.15) ? 1 : 0);
 					}
-					else if (k == 1 || k == 14 || i == 1 || i == 14)
+					else if (x == 1 || x == 14 || y == 1 || y == 14)
 					{
-						map[k, i] = MAP_TILE.GRAVEL;
+						map[x, y] = MAP_TILE.GRAVEL;
 					}
 					else
 					{
-						map[k, i] = (MAP_TILE)((Game1.random.NextDouble() < 0.1) ? 4 : 3);
+						map[x, y] = (MAP_TILE)((Game1.random.NextDouble() < 0.1) ? 4 : 3);
 					}
 				}
 			}
-			playerPosition = new Vector2(384f, 384f);
+			player1.position = new Vector2(384f, 384f);
 
 			//NET Player Move
-			NETmovePlayer(playerPosition);
+			NETmovePlayer(player1.position);
 
-			playerBoundingBox.X = (int)playerPosition.X + TileSize / 4;
-			playerBoundingBox.Y = (int)playerPosition.Y + TileSize / 4;
-			playerBoundingBox.Width = TileSize / 2;
-			playerBoundingBox.Height = TileSize / 2;
+			player1.boundingBox.X = (int)player1.position.X + TileSize / 4;
+			player1.boundingBox.Y = (int)player1.position.Y + TileSize / 4;
+			player1.boundingBox.Width = TileSize / 2;
+			player1.boundingBox.Height = TileSize / 2;
 			if (playingWithAbigail)
 			{
 				onStartMenu = false; //TODO show anyway?
-				player2Position = new Vector2(432f, 384f);
-				player2BoundingBox = new Rectangle(9 * TileSize, 8 * TileSize, TileSize, TileSize);
+				player2.position = new Vector2(432f, 384f);
+				player2.boundingBox = new Rectangle(9 * TileSize, 8 * TileSize, TileSize, TileSize);
 				betweenWaveTimer += 1500;
 			}
 			for (int j = 0; j < 4; j++)
@@ -704,8 +640,7 @@ namespace MultiPlayerPrairie
 			switch (which)
 			{
 				case POWERUP_TYPE.HEART:
-					itemToHold = ITEM_TYPE.FINISHED_GAME;
-					holdItemTimer = 4000;
+					player1.HoldItem(ITEM_TYPE.FINISHED_GAME, 4000);
 					Game1.playSound("Cowboy_Secret");
 					endCutscene = true;
 					endCutsceneTimer = 4000;
@@ -759,14 +694,14 @@ namespace MultiPlayerPrairie
 					{
 						Point teleportSpot = Point.Zero;
 						int tries = 0;
-						while ((Math.Abs((float)teleportSpot.X - playerPosition.X) < 8f || Math.Abs((float)teleportSpot.Y - playerPosition.Y) < 8f || IsCollidingWithMap(teleportSpot) || IsCollidingWithMonster(new Rectangle(teleportSpot.X, teleportSpot.Y, TileSize, TileSize), null)) && tries < 10)
+						while ((Math.Abs((float)teleportSpot.X - player1.position.X) < 8f || Math.Abs((float)teleportSpot.Y - player1.position.Y) < 8f || IsCollidingWithMap(teleportSpot) || IsCollidingWithMonster(new Rectangle(teleportSpot.X, teleportSpot.Y, TileSize, TileSize), null)) && tries < 10)
 						{
 							teleportSpot = new Point(Game1.random.Next(TileSize, 16 * TileSize - TileSize), Game1.random.Next(TileSize, 16 * TileSize - TileSize));
 							tries++;
 						}
 						if (tries < 10)
 						{
-							temporarySprites.Add(new TemporaryAnimatedSprite("LooseSprites\\Cursors", new Rectangle(464, 1792, 16, 16), 120f, 5, 0, playerPosition + topLeftScreenCoordinate + new Vector2(TileSize / 2, TileSize / 2), flicker: false, flipped: false, 1f, 0f, Color.White, 3f, 0f, 0f, 0f, local: true));
+							temporarySprites.Add(new TemporaryAnimatedSprite("LooseSprites\\Cursors", new Rectangle(464, 1792, 16, 16), 120f, 5, 0, player1.position + topLeftScreenCoordinate + new Vector2(TileSize / 2, TileSize / 2), flicker: false, flipped: false, 1f, 0f, Color.White, 3f, 0f, 0f, 0f, local: true));
 							temporarySprites.Add(new TemporaryAnimatedSprite("LooseSprites\\Cursors", new Rectangle(464, 1792, 16, 16), 120f, 5, 0, new Vector2(teleportSpot.X, teleportSpot.Y) + topLeftScreenCoordinate + new Vector2(TileSize / 2, TileSize / 2), flicker: false, flipped: false, 1f, 0f, Color.White, 3f, 0f, 0f, 0f, local: true));
 							temporarySprites.Add(new TemporaryAnimatedSprite("LooseSprites\\Cursors", new Rectangle(464, 1792, 16, 16), 120f, 5, 0, new Vector2(teleportSpot.X - TileSize / 2, teleportSpot.Y) + topLeftScreenCoordinate + new Vector2(TileSize / 2, TileSize / 2), flicker: false, flipped: false, 1f, 0f, Color.White, 3f, 0f, 0f, 0f, local: true)
 							{
@@ -784,13 +719,13 @@ namespace MultiPlayerPrairie
 							{
 								delayBeforeAnimationStart = 800
 							});
-							playerPosition = new Vector2(teleportSpot.X, teleportSpot.Y);
+							player1.position = new Vector2(teleportSpot.X, teleportSpot.Y);
 
 							//NET Player Move
-							NETmovePlayer(playerPosition);
+							NETmovePlayer(player1.position);
 
 							monsterConfusionTimer = 4000;
-							playerInvincibleTimer = 4000;
+							player1.SetInvincible(4000);
 							Game1.playSound("cowboy_powerup");
 						}
 						break;
@@ -831,7 +766,6 @@ namespace MultiPlayerPrairie
 				case POWERUP_TYPE.SPREAD:
 				case POWERUP_TYPE.RAPIDFIRE:
 				case POWERUP_TYPE.SHOTGUN:
-					shotTimer = 0;
 					Game1.playSound("cowboy_gunload");
 					activePowerups.Add(which, powerupDuration + 2000);
 					break;
@@ -859,12 +793,9 @@ namespace MultiPlayerPrairie
 
 		public void StartGopherTrain(ITEM_TYPE item = ITEM_TYPE.NONE)
         {
-			if(item != ITEM_TYPE.NONE)
-            {
-				itemToHold = item;
-				
-			}
-			holdItemTimer = 2000;
+			player1.HoldItem(item, 2000);
+			player2.HoldItem(item, 2000);
+
 			Game1.playSound("Cowboy_Secret");
 			gopherTrain = true;
 			gopherTrainPosition = -TileSize * 2;
@@ -933,129 +864,17 @@ namespace MultiPlayerPrairie
 		{
 			for (int m = bullets.Count - 1; m >= 0; m--)
 			{
-				bullets[m].position.X += bullets[m].motion.X;
-				bullets[m].position.Y += bullets[m].motion.Y;
-				if (bullets[m].position.X <= 0 || bullets[m].position.Y <= 0 || bullets[m].position.X >= 768 || bullets[m].position.Y >= 768)
-				{
+				bullets[m].Update();
+				if(bullets[m].queuedForDeletion)
+                {
 					//NET Despawn Bullet
 					PK_BulletDespawned mBulletDespawned = new();
 					mBulletDespawned.id = bullets[m].id;
-					mBulletDespawned.isFriendly = true;
+					mBulletDespawned.isFriendly = bullets[m].isFriendly;
 					modInstance.Helper.Multiplayer.SendMessage(mBulletDespawned, "PK_BulletDespawned");
-
 					bullets.RemoveAt(m);
 				}
-				else if (map[bullets[m].position.X / 16 / 3, bullets[m].position.Y / 16 / 3] == MAP_TILE.FENCE)
-				{
-					//NET Despawn Bullet
-					PK_BulletDespawned mBulletDespawned = new();
-					mBulletDespawned.id = bullets[m].id;
-					mBulletDespawned.isFriendly = true;
-					modInstance.Helper.Multiplayer.SendMessage(mBulletDespawned, "PK_BulletDespawned");
-
-					bullets.RemoveAt(m);
-				}
-				else
-				{
-					for (int k = monsters.Count - 1; k >= 0; k--)
-					{
-						if (monsters[k].position.Intersects(new Rectangle(bullets[m].position.X, bullets[m].position.Y, 12, 12)))
-						{
-							int monsterhealth = monsters[k].health;
-							int monsterAfterDamageHealth;
-							if (monsters[k].TakeDamage(bullets[m].damage))
-							{
-								monsterAfterDamageHealth = monsters[k].health;
-								AddGuts(monsters[k].position.Location, monsters[k].type);
-								POWERUP_TYPE loot = monsters[k].GetLootDrop();
-								if (whichRound == 1 && Game1.random.NextDouble() < 0.5)
-								{
-									loot = POWERUP_TYPE.LOG;
-								}
-								if (whichRound > 0 && (loot == POWERUP_TYPE.ZOMBIE || loot == POWERUP_TYPE.LIFE) && Game1.random.NextDouble() < 0.4)
-								{
-									loot = POWERUP_TYPE.LOG;
-								}
-								if (loot != POWERUP_TYPE.LOG && whichWave != 12)
-								{
-									if(isHost)
-                                    {
-										powerups.Add(new Powerup(this, loot, monsters[k].position.Location, lootDuration));
-									}
-									
-								}
-								
-								//NET EnemyKilled
-								PK_EnemyKilled mEnemyKilled = new();
-								mEnemyKilled.id = monsters[k].id;
-								modInstance.Helper.Multiplayer.SendMessage(mEnemyKilled, "PK_EnemyKilled");
-								Game1.playSound("Cowboy_monsterDie");
-
-								monsters.RemoveAt(k);
-							}
-							else
-							{
-								monsterAfterDamageHealth = monsters[k].health;
-							}
-							bullets[m].damage -= monsterhealth - monsterAfterDamageHealth;
-							if (bullets[m].damage <= 0)
-							{
-								//NET Despawn Bullet
-								PK_BulletDespawned mBulletDespawned = new();
-								mBulletDespawned.id = bullets[m].id;
-								mBulletDespawned.isFriendly = true;
-								modInstance.Helper.Multiplayer.SendMessage(mBulletDespawned, "PK_BulletDespawned");
-
-								bullets.RemoveAt(m);
-							}
-							break;
-						}
-					}
-				}
 			}
-			//Bro this is litterally the worst loop ive ever seen in my entire life whattheFUCK
-			int l = enemyBullets.Count - 1;
-			while (true)
-			{
-				if (l >= 0)
-				{
-					enemyBullets[l].position.X += enemyBullets[l].motion.X;
-					enemyBullets[l].position.Y += enemyBullets[l].motion.Y;
-					if (enemyBullets[l].position.X <= 0 || enemyBullets[l].position.Y <= 0 || enemyBullets[l].position.X >= 762 || enemyBullets[l].position.Y >= 762)
-					{
-						//NET Despawn Bullet
-						PK_BulletDespawned mBulletDespawned = new();
-						mBulletDespawned.id = enemyBullets[l].id;
-						mBulletDespawned.isFriendly = false;
-						modInstance.Helper.Multiplayer.SendMessage(mBulletDespawned, "PK_BulletDespawned");
-
-						enemyBullets.RemoveAt(l);
-					}
-					else if (map[(enemyBullets[l].position.X + 6) / 16 / 3, (enemyBullets[l].position.Y + 6) / 16 / 3] == MAP_TILE.FENCE)
-					{
-						//NET Despawn Bullet
-						PK_BulletDespawned mBulletDespawned = new();
-						mBulletDespawned.id = enemyBullets[l].id;
-						mBulletDespawned.isFriendly = false;
-						modInstance.Helper.Multiplayer.SendMessage(mBulletDespawned, "PK_BulletDespawned");
-
-						enemyBullets.RemoveAt(l);
-					}
-					else if (playerInvincibleTimer <= 0 && deathTimer <= 0f && playerBoundingBox.Intersects(new Rectangle(enemyBullets[l].position.X, enemyBullets[l].position.Y, 15, 15)))
-					{
-						break;
-					}
-					l--;
-					continue;
-				}
-				return;
-			}
-			PlayerDie();
-
-			//NET Player death
-			PK_PlayerDeath message = new();
-			message.id = Game1.player.UniqueMultiplayerID;
-			modInstance.Helper.Multiplayer.SendMessage(message, "PK_PlayerDeath");
 		}
 
 		public void PlayerDie()
@@ -1067,7 +886,9 @@ namespace MultiPlayerPrairie
 			{
 				spawnQueue[i] = new List<SpawnTask>();
 			}
-			enemyBullets.Clear();
+
+			//enemyBullets.Clear(); Still needed? Might even look cool, and not scary because of invincibility timer
+
 			if (!shootoutLevel)
 			{
 				powerups.Clear();
@@ -1075,47 +896,29 @@ namespace MultiPlayerPrairie
 			}
 			died = true;
 			activePowerups.Clear();
-			deathTimer = 3000f;
+
 			if (overworldSong != null && overworldSong.IsPlaying)
 			{
 				overworldSong.Stop(AudioStopOptions.Immediate);
 			}
-			temporarySprites.Add(new TemporaryAnimatedSprite("LooseSprites\\Cursors", new Rectangle(464, 1808, 16, 16), 120f, 5, 0, playerPosition + topLeftScreenCoordinate, flicker: false, flipped: false, 1f, 0f, Color.White, 3f, 0f, 0f, 0f, local: true));
+			temporarySprites.Add(new TemporaryAnimatedSprite("LooseSprites\\Cursors", new Rectangle(464, 1808, 16, 16), 120f, 5, 0, player1.position + topLeftScreenCoordinate, flicker: false, flipped: false, 1f, 0f, Color.White, 3f, 0f, 0f, 0f, local: true));
 			waveTimer = Math.Min(80000, waveTimer + 10000);
 			betweenWaveTimer = 4000;
 			lives--;
-			playerInvincibleTimer = 5000;
-			if (shootoutLevel)
-			{
-				playerPosition = new Vector2(8 * TileSize, 3 * TileSize);
 
-				//NET Player Move
-				NETmovePlayer(playerPosition);
+			player1.Die();
+			player2.Die();
 
-				Game1.playSound("Cowboy_monsterDie");
-			}
-			else
-			{
-				playerPosition = new Vector2(8 * TileSize - TileSize, 8 * TileSize);
-
-				//NET Player Move
-				NETmovePlayer(playerPosition);
-
-				playerBoundingBox.X = (int)playerPosition.X + TileSize / 4;
-				playerBoundingBox.Y = (int)playerPosition.Y + TileSize / 4;
-				playerBoundingBox.Width = TileSize / 2;
-				playerBoundingBox.Height = TileSize / 2;
-
-				Game1.playSound("cowboy_dead");
-			}
 			if (lives < 0)
 			{
-				temporarySprites.Add(new TemporaryAnimatedSprite("LooseSprites\\Cursors", new Rectangle(464, 1808, 16, 16), 550f, 5, 0, playerPosition + topLeftScreenCoordinate, flicker: false, flipped: false, 1f, 0f, Color.White, 3f, 0f, 0f, 0f, local: true)
+				temporarySprites.Add(new TemporaryAnimatedSprite("LooseSprites\\Cursors", new Rectangle(464, 1808, 16, 16), 550f, 5, 0, player1.position + topLeftScreenCoordinate, flicker: false, flipped: false, 1f, 0f, Color.White, 3f, 0f, 0f, 0f, local: true)
 				{
 					alpha = 0.001f,
 					endFunction = AfterPlayerDeathFunction
 				});
-				deathTimer *= 3f;
+				player1.deathTimer *= 3f;
+				player2.deathTimer *= 3f;
+
 				Game1.player.jotpkProgress.Value = null;
 			}
 			else if (!shootoutLevel)
@@ -1356,7 +1159,9 @@ namespace MultiPlayerPrairie
 					_buttonHeldFrames[(GameKeys)l] = 0;
 				}
 			}
+
 			ProcessInputs();
+
 			if (quit)
 			{
 				Game1.stopMusicTrack(Game1.MusicContext.MiniGame);
@@ -1374,7 +1179,6 @@ namespace MultiPlayerPrairie
 					startTimer -= time.ElapsedGameTime.Milliseconds;
 					if (startTimer <= 0)
 					{
-						shotTimer = 100;
 						onStartMenu = false;
 					}
 				}
@@ -1427,10 +1231,10 @@ namespace MultiPlayerPrairie
 							map = MapLoader.GetMap(-1);
 							break;
 						case 2:
-							playerPosition = new Vector2(0f, 8 * TileSize);
+							player1.position = new Vector2(0f, 8 * TileSize);
 
 							//NET Player Move
-							NETmovePlayer(playerPosition);
+							NETmovePlayer(player1.position);
 
 							endCutsceneTimer = 12000;
 							break;
@@ -1456,11 +1260,11 @@ namespace MultiPlayerPrairie
 							break;
 					}
 				}
-				if (endCutscenePhase == 2 && playerPosition.X < (float)(9 * TileSize))
+				if (endCutscenePhase == 2 && player1.position.X < (float)(9 * TileSize))
 				{
-					playerPosition.X += 1f;
-					playerMotionAnimationTimer += time.ElapsedGameTime.Milliseconds;
-					playerMotionAnimationTimer %= 400f;
+					player1.position.X += 1f;
+					player1.playerMotionAnimationTimer += time.ElapsedGameTime.Milliseconds;
+					player1.playerMotionAnimationTimer %= 400;
 				}
 				return false;
 			}
@@ -1481,11 +1285,14 @@ namespace MultiPlayerPrairie
 			{
 				zombieModeTimer -= time.ElapsedGameTime.Milliseconds;
 			}
-			if (holdItemTimer > 0)
-			{
-				holdItemTimer -= time.ElapsedGameTime.Milliseconds;
-				return false;
-			}
+
+			//TODO tick really here?
+			player1.Tick(time);
+			//player2.Tick(time);
+
+			//Dont stop if the player is still holding up the item?
+			if (player1.IsHoldingItem()) return false;
+
 			if (screenFlash > 0)
 			{
 				screenFlash -= time.ElapsedGameTime.Milliseconds;
@@ -1499,12 +1306,12 @@ namespace MultiPlayerPrairie
 				}
 				if (playerJumped)
 				{
-					playerPosition.Y += 3f;
+					player1.position.Y += 3f;
 				}
-				if (Math.Abs(playerPosition.Y - (float)(gopherTrainPosition - TileSize)) <= 16f)
+				if (Math.Abs(player1.position.Y - (float)(gopherTrainPosition - TileSize)) <= 16f)
 				{
 					playerJumped = true;
-					playerPosition.Y = gopherTrainPosition - TileSize;
+					player1.position.Y = gopherTrainPosition - TileSize;
 				}
 				if (gopherTrainPosition > 16 * TileSize + TileSize)
 				{
@@ -1512,10 +1319,10 @@ namespace MultiPlayerPrairie
 					playerJumped = false;
 					whichWave++;
 					map = MapLoader.GetMap(whichWave);
-					playerPosition = new Vector2(8 * TileSize, 8 * TileSize);
+					player1.position = new Vector2(8 * TileSize, 8 * TileSize);
 
 					//NET Player Move
-					NETmovePlayer(playerPosition);
+					NETmovePlayer(player1.position);
 
 					world = ((world != 0) ? 1 : 2);
 					waveTimer = 80000;
@@ -1525,7 +1332,7 @@ namespace MultiPlayerPrairie
 					SaveGame();
 				}
 			}
-			if ((shopping || merchantArriving || waitingForPlayerToMoveDownAMap) && holdItemTimer <= 0)
+			if ((shopping || merchantArriving || waitingForPlayerToMoveDownAMap) && !player1.IsHoldingItem())
 			{
 				int oldTimer = shoppingTimer;
 				shoppingTimer += time.ElapsedGameTime.Milliseconds;
@@ -1535,34 +1342,32 @@ namespace MultiPlayerPrairie
 					Game1.playSound("Cowboy_Footstep");
 				}
 			}
-			if (playerInvincibleTimer > 0)
-			{
-				playerInvincibleTimer -= time.ElapsedGameTime.Milliseconds;
-			}
+
+			//Move palyers along when moving down to the next map
 			if (scrollingMap)
 			{
 				newMapPosition -= TileSize / 8;
 
-				playerPosition.Y -= TileSize / 8;
-				playerPosition.Y += 3f;
-				playerBoundingBox.X = (int)playerPosition.X + TileSize / 4;
-				playerBoundingBox.Y = (int)playerPosition.Y + TileSize / 4;
-				playerBoundingBox.Width = TileSize / 2;
-				playerBoundingBox.Height = TileSize / 2;
-				playerMovementDirections = new List<int>{2};
-				playerMotionAnimationTimer += time.ElapsedGameTime.Milliseconds;
-				playerMotionAnimationTimer %= 400f;
+				player1.position.Y -= TileSize / 8;
+				player1.position.Y += 3f;
+				player1.boundingBox.X = (int)player1.position.X + TileSize / 4;
+				player1.boundingBox.Y = (int)player1.position.Y + TileSize / 4;
+				player1.boundingBox.Width = TileSize / 2;
+				player1.boundingBox.Height = TileSize / 2;
+				player1.movementDirections = new List<int>{2};
+				player1.playerMotionAnimationTimer += time.ElapsedGameTime.Milliseconds;
+				player1.playerMotionAnimationTimer %= 400;
 
 
-				player2Position.Y -= TileSize / 8;
-				player2Position.Y += 3f;
-				player2BoundingBox.X = (int)playerPosition.X + TileSize / 4;
-				player2BoundingBox.Y = (int)playerPosition.Y + TileSize / 4;
-				player2BoundingBox.Width = TileSize / 2;
-				player2BoundingBox.Height = TileSize / 2;
-				player2MovementDirections = new List<int> { 2 };
+				player2.position.Y -= TileSize / 8;
+				player2.position.Y += 3f;
+				player2.boundingBox.X = (int)player1.position.X + TileSize / 4;
+				player2.boundingBox.Y = (int)player1.position.Y + TileSize / 4;
+				player2.boundingBox.Width = TileSize / 2;
+				player2.boundingBox.Height = TileSize / 2;
+				player2.movementDirections = new List<int> { 2 };
 
-
+				//Swap to the next map once the map is loaded
 				if (newMapPosition <= 0)
 				{
 					scrollingMap = false;
@@ -1571,7 +1376,7 @@ namespace MultiPlayerPrairie
 					shopping = false;
 					betweenWaveTimer = 5000;
 					waitingForPlayerToMoveDownAMap = false;
-					playerMovementDirections.Clear();
+					player1.movementDirections.Clear();
 					ApplyLevelSpecificStates();
 				}
 			}
@@ -1607,144 +1412,52 @@ namespace MultiPlayerPrairie
 			}
 			if (motionPause <= 0)
 			{
-				for (int i2 = powerups.Count - 1; i2 >= 0; i2--)
+				for (int i = powerups.Count - 1; i >= 0; i--)
 				{
-					if (Utility.distance(playerBoundingBox.Center.X, powerups[i2].position.X + TileSize / 2, playerBoundingBox.Center.Y, powerups[i2].position.Y + TileSize / 2) <= (float)(TileSize + 3) && (powerups[i2].position.X < TileSize || powerups[i2].position.X >= 16 * TileSize - TileSize || powerups[i2].position.Y < TileSize || powerups[i2].position.Y >= 16 * TileSize - TileSize))
+					if (Utility.distance(player1.boundingBox.Center.X, powerups[i].position.X + TileSize / 2, player1.boundingBox.Center.Y, powerups[i].position.Y + TileSize / 2) <= (float)(TileSize + 3) && (powerups[i].position.X < TileSize || powerups[i].position.X >= 16 * TileSize - TileSize || powerups[i].position.Y < TileSize || powerups[i].position.Y >= 16 * TileSize - TileSize))
 					{
-						if (powerups[i2].position.X + TileSize / 2 < playerBoundingBox.Center.X)
+						if (powerups[i].position.X + TileSize / 2 < player1.boundingBox.Center.X)
 						{
-							powerups[i2].position.X++;
+							powerups[i].position.X++;
 						}
-						if (powerups[i2].position.X + TileSize / 2 > playerBoundingBox.Center.X)
+						if (powerups[i].position.X + TileSize / 2 > player1.boundingBox.Center.X)
 						{
-							powerups[i2].position.X--;
+							powerups[i].position.X--;
 						}
-						if (powerups[i2].position.Y + TileSize / 2 < playerBoundingBox.Center.Y)
+						if (powerups[i].position.Y + TileSize / 2 < player1.boundingBox.Center.Y)
 						{
-							powerups[i2].position.Y++;
+							powerups[i].position.Y++;
 						}
-						if (powerups[i2].position.Y + TileSize / 2 > playerBoundingBox.Center.Y)
+						if (powerups[i].position.Y + TileSize / 2 > player1.boundingBox.Center.Y)
 						{
-							powerups[i2].position.Y--;
+							powerups[i].position.Y--;
 						}
 					}
-					powerups[i2].duration -= time.ElapsedGameTime.Milliseconds;
-					if (powerups[i2].duration <= 0)
+					powerups[i].duration -= time.ElapsedGameTime.Milliseconds;
+					if (powerups[i].duration <= 0)
 					{
-						powerups.RemoveAt(i2);
+						powerups.RemoveAt(i);
 					}
 				}
-				for (int i4 = activePowerups.Count - 1; i4 >= 0; i4--)
+				for (int i = activePowerups.Count - 1; i >= 0; i--)
 				{
-					activePowerups[activePowerups.ElementAt(i4).Key] -= time.ElapsedGameTime.Milliseconds;
-					if (activePowerups[activePowerups.ElementAt(i4).Key] <= 0)
+					activePowerups[activePowerups.ElementAt(i).Key] -= time.ElapsedGameTime.Milliseconds;
+					if (activePowerups[activePowerups.ElementAt(i).Key] <= 0)
 					{
-						activePowerups.Remove(activePowerups.ElementAt(i4).Key);
+						activePowerups.Remove(activePowerups.ElementAt(i).Key);
 					}
 				}
-				if (deathTimer <= 0f && playerMovementDirections.Count > 0 && !scrollingMap)
+
+				//As Host, move down to the level if the level is finished and both players are at the bottom of the screen
+				if (waitingForPlayerToMoveDownAMap && isHost)
 				{
-					int effectiveDirections = playerMovementDirections.Count;
-					if (effectiveDirections >= 2 && playerMovementDirections.Last() == (playerMovementDirections.ElementAt(playerMovementDirections.Count - 2) + 2) % 4)
+					float bottomBorder = 16 * TileSize - TileSize / 2;
+					if (player1.boundingBox.Bottom >= bottomBorder && player2.boundingBox.Bottom >= bottomBorder)
 					{
-						effectiveDirections = 1;
-					}
-					float speed = GetMovementSpeed(3f, effectiveDirections);
-					if (activePowerups.Keys.Contains(POWERUP_TYPE.SPEED))
-					{
-						speed *= 1.5f;
-					}
-					if (zombieModeTimer > 0)
-					{
-						speed *= 1.5f;
-					}
-					for (int i5 = 0; i5 < runSpeedLevel; i5++)
-					{
-						speed *= 1.25f;
-					}
-					for (int i6 = Math.Max(0, playerMovementDirections.Count - 2); i6 < playerMovementDirections.Count; i6++)
-					{
-						if (i6 != 0 || playerMovementDirections.Count < 2 || playerMovementDirections.Last() != (playerMovementDirections.ElementAt(playerMovementDirections.Count - 2) + 2) % 4)
-						{
-							Vector2 newPlayerPosition = playerPosition;
-							switch (playerMovementDirections.ElementAt(i6))
-							{
-								case 0:
-									newPlayerPosition.Y -= speed;
-									break;
-								case 3:
-									newPlayerPosition.X -= speed;
-									break;
-								case 2:
-									newPlayerPosition.Y += speed;
-									break;
-								case 1:
-									newPlayerPosition.X += speed;
-									break;
-							}
-							Rectangle newPlayerBox = new((int)newPlayerPosition.X + TileSize / 4, (int)newPlayerPosition.Y + TileSize / 4, TileSize / 2, TileSize / 2);
-							//Stop players from colliding
-							if (!IsCollidingWithMap(newPlayerBox) && (!merchantBox.Intersects(newPlayerBox) || merchantBox.Intersects(playerBoundingBox)))// && (!playingWithAbigail || !newPlayerBox.Intersects(player2BoundingBox)))
-							{
-								playerPosition = newPlayerPosition;
+						PK_StartLevelTransition message = new();
+						modInstance.Helper.Multiplayer.SendMessage(message, "PK_StartLevelTransition");
 
-								//NET Player Move
-								NETmovePlayer(playerPosition);
-							}
-						}
-					}
-					playerBoundingBox.X = (int)playerPosition.X + TileSize / 4;
-					playerBoundingBox.Y = (int)playerPosition.Y + TileSize / 4;
-					playerBoundingBox.Width = TileSize / 2;
-					playerBoundingBox.Height = TileSize / 2;
-					playerMotionAnimationTimer += time.ElapsedGameTime.Milliseconds;
-					playerMotionAnimationTimer %= 400f;
-					playerFootstepSoundTimer -= time.ElapsedGameTime.Milliseconds;
-					if (playerFootstepSoundTimer <= 0f)
-					{
-						Game1.playSound("Cowboy_Footstep");
-						playerFootstepSoundTimer = 200f;
-					}
-					for (int i7 = powerups.Count - 1; i7 >= 0; i7--)
-					{
-						if (playerBoundingBox.Intersects(new Rectangle(powerups[i7].position.X, powerups[i7].position.Y, TileSize, TileSize)) && !playerBoundingBox.Intersects(noPickUpBox))
-						{
-							//NET Pickup Powerup
-							PK_PowerupPickup message = new();
-							message.id = powerups[i7].id;
-							message.which = (int)powerups[i7].which;
-							modInstance.Helper.Multiplayer.SendMessage(message, "PK_PowerupPickup");
-
-							if (heldItem != null)
-							{
-								UsePowerup(powerups[i7].which);
-								powerups.RemoveAt(i7);
-							}
-							else if (GetPowerUp(powerups[i7]))
-							{
-								powerups.RemoveAt(i7);
-							}
-						}
-					}
-					if (!playerBoundingBox.Intersects(noPickUpBox))
-					{
-						noPickUpBox.Location = new Point(0, 0);
-					}
-
-					if (waitingForPlayerToMoveDownAMap && isHost)
-					{
-						float bottomBorder = 16 * TileSize - TileSize / 2;
-						if(playerBoundingBox.Bottom >= bottomBorder && player2BoundingBox.Bottom >= bottomBorder)
-                        {
-							PK_StartLevelTransition message = new();
-							modInstance.Helper.Multiplayer.SendMessage(message, "PK_StartLevelTransition");
-
-							StartLevelTransition();
-						}
-					}
-					if (!shoppingCarpetNoPickup.Intersects(playerBoundingBox))
-					{
-						shoppingCarpetNoPickup.X = -1000;
+						StartLevelTransition();
 					}
 				}
 				if (shopping)
@@ -1769,17 +1482,20 @@ namespace MultiPlayerPrairie
 					{
 						for (int i8 = storeItems.Count - 1; i8 >= 0; i8--)
 						{
-							if (!playerBoundingBox.Intersects(shoppingCarpetNoPickup) && playerBoundingBox.Intersects(storeItems.ElementAt(i8).Key) && coins >= GetPriceForItem(storeItems.ElementAt(i8).Value))
+							if (!player1.boundingBox.Intersects(shoppingCarpetNoPickup) && player1.boundingBox.Intersects(storeItems.ElementAt(i8).Key) && coins >= GetPriceForItem(storeItems.ElementAt(i8).Value))
 							{
 								Game1.playSound("Cowboy_Secret");
-								holdItemTimer = 2500;
 								motionPause = 2500;
-								itemToHold = storeItems.ElementAt(i8).Value;
+								ITEM_TYPE boughtItem = storeItems.ElementAt(i8).Value;
+								coins -= GetPriceForItem(boughtItem);
+
+								player1.HoldItem(boughtItem, 2500);
 								storeItems.Remove(storeItems.ElementAt(i8).Key);
+
 								merchantArriving = false;
 								merchantShopOpen = false;
-								coins -= GetPriceForItem(itemToHold);
-								switch (itemToHold)
+								
+								switch (boughtItem)
 								{
 									case ITEM_TYPE.AMMO1:
 									case ITEM_TYPE.AMMO2:
@@ -1812,75 +1528,7 @@ namespace MultiPlayerPrairie
 				}
 				cactusDanceTimer += time.ElapsedGameTime.Milliseconds;
 				cactusDanceTimer %= 1600f;
-				if (shotTimer > 0)
-				{
-					shotTimer -= time.ElapsedGameTime.Milliseconds;
-				}
-				if (deathTimer <= 0f && playerShootingDirections.Count > 0 && shotTimer <= 0)
-				{
-					if (activePowerups.ContainsKey(POWERUP_TYPE.SPREAD))
-					{
-						SpawnBullets(new int[1], playerPosition);
-						SpawnBullets(new int[1]
-						{
-							1
-						}, playerPosition);
-						SpawnBullets(new int[1]
-						{
-							2
-						}, playerPosition);
-						SpawnBullets(new int[1]
-						{
-							3
-						}, playerPosition);
-						SpawnBullets(new int[2]
-						{
-							0,
-							1
-						}, playerPosition);
-						SpawnBullets(new int[2]
-						{
-							1,
-							2
-						}, playerPosition);
-						SpawnBullets(new int[2]
-						{
-							2,
-							3
-						}, playerPosition);
-						SpawnBullets(new int[2]
-						{
-							3,
-							0
-						}, playerPosition);
-					}
-					else if (playerShootingDirections.Count == 1 || playerShootingDirections.Last() == (playerShootingDirections.ElementAt(playerShootingDirections.Count - 2) + 2) % 4)
-					{
-						SpawnBullets(new int[1]
-						{
-							(playerShootingDirections.Count == 2 && playerShootingDirections.Last() == (playerShootingDirections.ElementAt(playerShootingDirections.Count - 2) + 2) % 4) ? playerShootingDirections.ElementAt(1) : playerShootingDirections.ElementAt(0)
-						}, playerPosition);
-					}
-					else
-					{
-						SpawnBullets(playerShootingDirections.ToArray(), playerPosition);
-					}
-					Game1.playSound("Cowboy_gunshot");
-					shotTimer = shootingDelay;
-					if (activePowerups.ContainsKey(POWERUP_TYPE.RAPIDFIRE))
-					{
-						shotTimer /= 4;
-					}
-					for (int i3 = 0; i3 < fireSpeedLevel; i3++)
-					{
-						shotTimer = shotTimer * 3 / 4;
-					}
-					if (activePowerups.ContainsKey(POWERUP_TYPE.SHOTGUN))
-					{
-						shotTimer = shotTimer * 3 / 2;
-					}
-					shotTimer = Math.Max(shotTimer, 20);
-				}
+
 				UpdateBullets(time);
 				foreach (Powerup powerup in powerups)
 				{
@@ -1911,15 +1559,15 @@ namespace MultiPlayerPrairie
 					Game1.musicPlayerVolume = Game1.options.musicVolumeLevel;
 					Game1.musicCategory.SetVolume(Game1.musicPlayerVolume);
 				}
-				if (deathTimer > 0f)
+				if (player1.deathTimer > 0f)
 				{
-					deathTimer -= time.ElapsedGameTime.Milliseconds;
+					player1.deathTimer -= time.ElapsedGameTime.Milliseconds;
 				}
 				if (betweenWaveTimer > 0 && monsters.Count == 0 && IsSpawnQueueEmpty() && !shopping && !waitingForPlayerToMoveDownAMap)
 				{
 					betweenWaveTimer -= time.ElapsedGameTime.Milliseconds;
 				}
-				else if (deathTimer <= 0f && !waitingForPlayerToMoveDownAMap && !shopping && !shootoutLevel)
+				else if (player1.deathTimer <= 0f && !waitingForPlayerToMoveDownAMap && !shopping && !shootoutLevel)
 				{
 					if (waveTimer > 0)
 					{
@@ -1945,7 +1593,7 @@ namespace MultiPlayerPrairie
 							hasGopherAppeared = true;
 							gopherBox = new Rectangle(Game1.random.Next(16 * TileSize), Game1.random.Next(16 * TileSize), TileSize, TileSize);
 							int tries2 = 0;
-							while ((IsCollidingWithMap(gopherBox) || IsCollidingWithMonster(gopherBox, null) || Math.Abs((float)gopherBox.X - playerPosition.X) < (float)(TileSize * 6) || Math.Abs((float)gopherBox.Y - playerPosition.Y) < (float)(TileSize * 6) || Math.Abs(gopherBox.X - 8 * TileSize) < TileSize * 4 || Math.Abs(gopherBox.Y - 8 * TileSize) < TileSize * 4) && tries2 < 10)
+							while ((IsCollidingWithMap(gopherBox) || IsCollidingWithMonster(gopherBox, null) || Math.Abs((float)gopherBox.X - player1.position.X) < (float)(TileSize * 6) || Math.Abs((float)gopherBox.Y - player1.position.Y) < (float)(TileSize * 6) || Math.Abs(gopherBox.X - 8 * TileSize) < TileSize * 4 || Math.Abs(gopherBox.Y - 8 * TileSize) < TileSize * 4) && tries2 < 10)
 							{
 								gopherBox.X = Game1.random.Next(16 * TileSize);
 								gopherBox.Y = Game1.random.Next(16 * TileSize);
@@ -2125,19 +1773,19 @@ namespace MultiPlayerPrairie
 				}
 				if (playingWithAbigail)
 				{
-					UpdateAbigail(time);
+					player2.TickSlave(time);
 				}
 				for (int i = monsters.Count - 1; i >= 0; i--)
 				{
 					// Target the closest player
-					float dist1 = (playerPosition - monsters[i].position.Location.ToVector2()).LengthSquared();
-					float dist2 = (player2Position - monsters[i].position.Location.ToVector2()).LengthSquared();
+					float dist1 = (player1.position - monsters[i].position.Location.ToVector2()).LengthSquared();
+					float dist2 = (player2.position - monsters[i].position.Location.ToVector2()).LengthSquared();
 
-					Vector2 targetPosition = dist1 <= dist2 ? playerPosition : player2Position;
+					Vector2 targetPosition = dist1 <= dist2 ? player1.position : player2.position;
 					monsters[i].Move(targetPosition, time);
 
 
-					if (i < monsters.Count && monsters[i].position.Intersects(playerBoundingBox) && playerInvincibleTimer <= 0)
+					if (i < monsters.Count && monsters[i].position.Intersects(player1.boundingBox) && !player1.IsInvincible())
 					{
 						if (zombieModeTimer <= 0)
 						{
@@ -2162,29 +1810,6 @@ namespace MultiPlayerPrairie
 							monsters.RemoveAt(i);
 							Game1.playSound("Cowboy_monsterDie");
 						}
-					}
-					if (playingWithAbigail && i < monsters.Count && monsters[i].position.Intersects(player2BoundingBox) && player2invincibletimer <= 0)
-					{
-						//TODO player 2 death
-						Game1.playSound("Cowboy_monsterDie");
-						player2deathtimer = 3000;
-						temporarySprites.Add(new TemporaryAnimatedSprite("LooseSprites\\Cursors", new Rectangle(464, 1808, 16, 16), 120f, 5, 0, player2Position + topLeftScreenCoordinate + new Vector2(TileSize / 2, TileSize / 2), flicker: false, flipped: false, 1f, 0f, Color.White, 3f, 0f, 0f, 0f, local: true));
-						player2invincibletimer = 4000;
-						player2Position = new Vector2(8f, 8f) * TileSize;
-						player2BoundingBox.X = (int)player2Position.X + TileSize / 4;
-						player2BoundingBox.Y = (int)player2Position.Y + TileSize / 4;
-						player2BoundingBox.Width = TileSize / 2;
-						player2BoundingBox.Height = TileSize / 2;
-						/*
-						if (playerBoundingBox.Intersects(player2BoundingBox))
-						{
-							player2Position.X = playerBoundingBox.Right + 2;
-						}
-						*/
-						player2BoundingBox.X = (int)player2Position.X + TileSize / 4;
-						player2BoundingBox.Y = (int)player2Position.Y + TileSize / 4;
-						player2BoundingBox.Width = TileSize / 2;
-						player2BoundingBox.Height = TileSize / 2;
 					}
 				}
 			}
@@ -2316,12 +1941,8 @@ namespace MultiPlayerPrairie
 					gameOverOption = Math.Max(0, gameOverOption - 1);
 					Game1.playSound("Cowboy_gunshot");
 				}
-				AddPlayerMovementDirection(0);
 			}
-			else if (playerMovementDirections.Contains(0))
-			{
-				playerMovementDirections.Remove(0);
-			}
+
 			if (_buttonHeldFrames[GameKeys.MoveDown] > 0)
 			{
 				if (_buttonHeldFrames[GameKeys.MoveDown] == 1 && gameOver)
@@ -2329,60 +1950,10 @@ namespace MultiPlayerPrairie
 					gameOverOption = Math.Min(1, gameOverOption + 1);
 					Game1.playSound("Cowboy_gunshot");
 				}
-				AddPlayerMovementDirection(2);
 			}
-			else if (playerMovementDirections.Contains(2))
-			{
-				playerMovementDirections.Remove(2);
-			}
-			if (_buttonHeldFrames[GameKeys.MoveLeft] > 0)
-			{
-				AddPlayerMovementDirection(3);
-			}
-			else if (playerMovementDirections.Contains(3))
-			{
-				playerMovementDirections.Remove(3);
-			}
-			if (_buttonHeldFrames[GameKeys.MoveRight] > 0)
-			{
-				AddPlayerMovementDirection(1);
-			}
-			else if (playerMovementDirections.Contains(1))
-			{
-				playerMovementDirections.Remove(1);
-			}
-			if (_buttonHeldFrames[GameKeys.ShootUp] > 0)
-			{
-				AddPlayerShootingDirection(0);
-			}
-			else if (playerShootingDirections.Contains(0))
-			{
-				playerShootingDirections.Remove(0);
-			}
-			if (_buttonHeldFrames[GameKeys.ShootDown] > 0)
-			{
-				AddPlayerShootingDirection(2);
-			}
-			else if (playerShootingDirections.Contains(2))
-			{
-				playerShootingDirections.Remove(2);
-			}
-			if (_buttonHeldFrames[GameKeys.ShootLeft] > 0)
-			{
-				AddPlayerShootingDirection(3);
-			}
-			else if (playerShootingDirections.Contains(3))
-			{
-				playerShootingDirections.Remove(3);
-			}
-			if (_buttonHeldFrames[GameKeys.ShootRight] > 0)
-			{
-				AddPlayerShootingDirection(1);
-			}
-			else if (playerShootingDirections.Contains(1))
-			{
-				playerShootingDirections.Remove(1);
-			}
+
+			player1.ProcessInputs(_buttonHeldFrames);
+
 			if (_buttonHeldFrames[GameKeys.SelectOption] == 1 && gameOver)
 			{
 				if (gameOverOption == 1)
@@ -2397,7 +1968,7 @@ namespace MultiPlayerPrairie
 					Game1.playSound("Pickup_Coin15");
 				}
 			}
-			if (_buttonHeldFrames[GameKeys.UsePowerup] == 1 && !gameOver && heldItem != null && deathTimer <= 0f && zombieModeTimer <= 0)
+			if (_buttonHeldFrames[GameKeys.UsePowerup] == 1 && !gameOver && heldItem != null && player1.deathTimer <= 0f && zombieModeTimer <= 0)
 			{
 				UsePowerup(heldItem.which);
 				heldItem = null;
@@ -2433,74 +2004,6 @@ namespace MultiPlayerPrairie
 				{
 					outlawSong = Game1.soundBank.GetCue("cowboy_outlawsong");
 					outlawSong.Play();
-				}
-			}
-		}
-
-		public void UpdateAbigail(GameTime time)
-		{
-			player2TargetUpdateTimer -= time.ElapsedGameTime.Milliseconds;
-			if (player2deathtimer > 0)
-			{
-				player2deathtimer -= time.ElapsedGameTime.Milliseconds;
-			}
-			if (player2invincibletimer > 0)
-			{
-				player2invincibletimer -= time.ElapsedGameTime.Milliseconds;
-			}
-			if (player2deathtimer > 0)
-			{
-				return;
-			}
-
-
-			
-			if (player2MovementDirections.Count > 0)
-			{
-				float speed = GetMovementSpeed(3f, player2MovementDirections.Count);
-				for (int j = 0; j < player2MovementDirections.Count; j++)
-				{
-					Vector2 newPlayerPosition = player2Position;
-					switch (player2MovementDirections[j])
-					{
-						case 0:
-							newPlayerPosition.Y -= speed;
-							break;
-						case 3:
-							newPlayerPosition.X -= speed;
-							break;
-						case 2:
-							newPlayerPosition.Y += speed;
-							break;
-						case 1:
-							newPlayerPosition.X += speed;
-							break;
-					}
-					Rectangle newPlayerBox = new((int)newPlayerPosition.X + TileSize / 4, (int)newPlayerPosition.Y + TileSize / 4, TileSize / 2, TileSize / 2);
-					if (!IsCollidingWithMap(newPlayerBox) && (!merchantBox.Intersects(newPlayerBox) || merchantBox.Intersects(player2BoundingBox)) && !newPlayerBox.Intersects(playerBoundingBox))
-					{
-						//DISABLE abigail movement
-						//player2Position = newPlayerPosition;
-					}
-				}
-				player2BoundingBox.X = (int)player2Position.X + TileSize / 4;
-				player2BoundingBox.Y = (int)player2Position.Y + TileSize / 4;
-				player2BoundingBox.Width = TileSize / 2;
-				player2BoundingBox.Height = TileSize / 2;
-				player2AnimationTimer += time.ElapsedGameTime.Milliseconds;
-				player2AnimationTimer %= 400;
-				player2FootstepSoundTimer -= time.ElapsedGameTime.Milliseconds;
-				if (player2FootstepSoundTimer <= 0)
-				{
-					Game1.playSound("Cowboy_Footstep");
-					player2FootstepSoundTimer = 200;
-				}
-				for (int i = powerups.Count - 1; i >= 0; i--)
-				{
-					if (player2BoundingBox.Intersects(new Rectangle(powerups[i].position.X, powerups[i].position.Y, TileSize, TileSize)) && !player2BoundingBox.Intersects(noPickUpBox))
-					{
-						powerups.RemoveAt(i);
-					}
 				}
 			}
 		}
@@ -2745,25 +2248,7 @@ namespace MultiPlayerPrairie
 		}
 
 
-		private void AddPlayerMovementDirection(int direction)
-		{
-			if (!gopherTrain && !playerMovementDirections.Contains(direction))
-			{
-				if (playerMovementDirections.Count == 1)
-				{
-					_ = (playerMovementDirections.ElementAt(0) + 2) % 4;
-				}
-				playerMovementDirections.Add(direction);
-			}
-		}
 
-		private void AddPlayerShootingDirection(int direction)
-		{
-			if (!playerShootingDirections.Contains(direction))
-			{
-				playerShootingDirections.Add(direction);
-			}
-		}
 
 		public void StartShoppingLevel()
 		{
@@ -2878,8 +2363,8 @@ namespace MultiPlayerPrairie
 				{
 					case 0:
 						b.Draw(Game1.staminaRect, new Rectangle((int)topLeftScreenCoordinate.X, (int)topLeftScreenCoordinate.Y, 16 * TileSize, 16 * TileSize), Game1.staminaRect.Bounds, Color.Black, 0f, Vector2.Zero, SpriteEffects.None, 0.0001f);
-						b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + playerPosition + new Vector2(0f, -TileSize / 4), new Rectangle(384, 1760, 16, 16), Color.White * ((endCutsceneTimer < 2000) ? (1f * ((float)endCutsceneTimer / 2000f)) : 1f), 0f, Vector2.Zero, 3f, SpriteEffects.None, playerPosition.Y / 10000f + 0.001f);
-						b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + playerPosition + new Vector2(0f, -TileSize * 2 / 3) + new Vector2(0f, -TileSize / 4), new Rectangle(320 + (int)itemToHold * 16, 1776, 16, 16), Color.White * ((endCutsceneTimer < 2000) ? (1f * ((float)endCutsceneTimer / 2000f)) : 1f), 0f, Vector2.Zero, 3f, SpriteEffects.None, playerPosition.Y / 10000f + 0.002f);
+						b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + player1.position + new Vector2(0f, -TileSize / 4), new Rectangle(384, 1760, 16, 16), Color.White * ((endCutsceneTimer < 2000) ? (1f * ((float)endCutsceneTimer / 2000f)) : 1f), 0f, Vector2.Zero, 3f, SpriteEffects.None, player1.position.Y / 10000f + 0.001f);
+						b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + player1.position + new Vector2(0f, -TileSize * 2 / 3) + new Vector2(0f, -TileSize / 4), new Rectangle(320 + (int)player1.GetHeldItem() * 16, 1776, 16, 16), Color.White * ((endCutsceneTimer < 2000) ? (1f * ((float)endCutsceneTimer / 2000f)) : 1f), 0f, Vector2.Zero, 3f, SpriteEffects.None, player1.position.Y / 10000f + 0.002f);
 						break;
 					case 4:
 					case 5:
@@ -2914,9 +2399,9 @@ namespace MultiPlayerPrairie
 							b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(10 * TileSize, 8 * TileSize), new Rectangle(272 - endCutsceneTimer / 300 % 4 * 16, 1792, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 0.02f);
 							if (endCutscenePhase == 2)
 							{
-								b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + playerPosition + new Vector2(4f, 13f) * 3f, new Rectangle(484, 1760 + (int)(playerMotionAnimationTimer / 100f) * 3, 8, 3), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, playerPosition.Y / 10000f + 0.001f + 0.001f);
-								b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + playerPosition, new Rectangle(384, 1760, 16, 13), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, playerPosition.Y / 10000f + 0.002f + 0.001f);
-								b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + playerPosition + new Vector2(0f, -TileSize * 2 / 3 - TileSize / 4), new Rectangle(320 + (int)itemToHold * 16, 1776, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, playerPosition.Y / 10000f + 0.005f);
+								b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + player1.position + new Vector2(4f, 13f) * 3f, new Rectangle(484, 1760 + (int)(player1.playerMotionAnimationTimer / 100f) * 3, 8, 3), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, player1.position.Y / 10000f + 0.001f + 0.001f);
+								b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + player1.position, new Rectangle(384, 1760, 16, 13), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, player1.position.Y / 10000f + 0.002f + 0.001f);
+								b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + player1.position + new Vector2(0f, -TileSize * 2 / 3 - TileSize / 4), new Rectangle(320 + (int)player1.GetHeldItem() * 16, 1776, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, player1.position.Y / 10000f + 0.005f);
 							}
 							b.Draw(Game1.staminaRect, new Rectangle((int)topLeftScreenCoordinate.X, (int)topLeftScreenCoordinate.Y, 16 * TileSize, 16 * TileSize), Game1.staminaRect.Bounds, Color.Black * ((endCutscenePhase == 1 && endCutsceneTimer > 12500) ? ((float)((endCutsceneTimer - 12500) / 3000)) : 0f), 0f, Vector2.Zero, SpriteEffects.None, 1f);
 							break;
@@ -2927,10 +2412,10 @@ namespace MultiPlayerPrairie
 			{
 				if (zombieModeTimer > 8200)
 				{
-					b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + playerPosition, new Rectangle(384 + ((zombieModeTimer / 200 % 2 == 0) ? 16 : 0), 1760, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 1f);
-					for (int y = (int)(playerPosition.Y - (float)TileSize); y > -TileSize; y -= TileSize)
+					b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + player1.position, new Rectangle(384 + ((zombieModeTimer / 200 % 2 == 0) ? 16 : 0), 1760, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 1f);
+					for (int y = (int)(player1.position.Y - (float)TileSize); y > -TileSize; y -= TileSize)
 					{
-						b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(playerPosition.X, y), new Rectangle(368 + ((y / TileSize % 3 == 0) ? 16 : 0), 1744, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 1f);
+						b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(player1.position.X, y), new Rectangle(368 + ((y / TileSize % 3 == 0) ? 16 : 0), 1744, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 1f);
 					}
 					b.End();
 					return;
@@ -2954,46 +2439,6 @@ namespace MultiPlayerPrairie
 					b.Draw(Game1.staminaRect, new Rectangle((int)topLeftScreenCoordinate.X, -1, 16 * TileSize, (int)topLeftScreenCoordinate.Y), Game1.staminaRect.Bounds, Color.Black, 0f, Vector2.Zero, SpriteEffects.None, 1f);
 					b.Draw(Game1.staminaRect, new Rectangle((int)topLeftScreenCoordinate.X, (int)topLeftScreenCoordinate.Y + 16 * TileSize, 16 * TileSize, (int)topLeftScreenCoordinate.Y + 2), Game1.staminaRect.Bounds, Color.Black, 0f, Vector2.Zero, SpriteEffects.None, 1f);
 				}
-				if (deathTimer <= 0f && (playerInvincibleTimer <= 0 || playerInvincibleTimer / 100 % 2 == 0))
-				{
-					if (holdItemTimer > 0)
-					{
-						b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + playerPosition + new Vector2(0f, -TileSize / 4), new Rectangle(384, 1760, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, playerPosition.Y / 10000f + 0.001f);
-						b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + playerPosition + new Vector2(0f, -TileSize * 2 / 3) + new Vector2(0f, -TileSize / 4), new Rectangle(320 + (int)itemToHold * 16, 1776, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, playerPosition.Y / 10000f + 0.002f);
-					}
-					else if (zombieModeTimer > 0)
-					{
-						b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + playerPosition + new Vector2(0f, -TileSize / 4), new Rectangle(352 + ((zombieModeTimer / 50 % 2 == 0) ? 16 : 0), 1760, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, playerPosition.Y / 10000f + 0.001f);
-					}
-					else if (playerMovementDirections.Count == 0 && playerShootingDirections.Count == 0)
-					{
-						b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + playerPosition + new Vector2(0f, -TileSize / 4), new Rectangle(496, 1760, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, playerPosition.Y / 10000f + 0.001f);
-					}
-					else
-					{
-						int facingDirection = (playerShootingDirections.Count == 0) ? playerMovementDirections.ElementAt(0) : playerShootingDirections.Last();
-						b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + playerPosition + new Vector2(0f, -TileSize / 4) + new Vector2(4f, 13f) * 3f, new Rectangle(483, 1760 + (int)(playerMotionAnimationTimer / 100f) * 3, 10, 3), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, playerPosition.Y / 10000f + 0.001f + 0.001f);
-						b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + playerPosition + new Vector2(3f, -TileSize / 4), new Rectangle(464 + facingDirection * 16, 1744, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, playerPosition.Y / 10000f + 0.002f + 0.001f);
-					}
-				}
-
-				//Draw player2 (abigail)
-				if (playingWithAbigail && player2deathtimer <= 0 && (player2invincibletimer <= 0 || player2invincibletimer / 100 % 2 == 0))
-				{
-					if (player2MovementDirections.Count == 0 && player2ShootingDirections.Count == 0)
-					{
-						b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + player2Position + new Vector2(0f, -TileSize / 4), new Rectangle(256, 1728, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, playerPosition.Y / 10000f + 0.001f);
-					}
-					else
-					{
-						int facingDirection2 = (player2ShootingDirections.Count == 0) ? player2MovementDirections[0] : player2ShootingDirections[0];
-						b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + player2Position + new Vector2(0f, -TileSize / 4) + new Vector2(4f, 13f) * 3f, new Rectangle(243, 1728 + player2AnimationTimer / 100 * 3, 10, 3), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, player2Position.Y / 10000f + 0.001f + 0.001f);
-						b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + player2Position + new Vector2(0f, -TileSize / 4), new Rectangle(224 + facingDirection2 * 16, 1712, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, player2Position.Y / 10000f + 0.002f + 0.001f);
-					}
-
-					//player2ShootingDirections.Clear();
-					//player2MovementDirections.Clear();
-				}
 
 				//Draw all temporary sprites
 				foreach (TemporaryAnimatedSprite temporarySprite in temporarySprites)
@@ -3008,13 +2453,9 @@ namespace MultiPlayerPrairie
 				}
 
 				//Draw all bullets
-				foreach (Bullet p2 in bullets)
+				foreach (Bullet bullet in bullets)
 				{
-					b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(p2.position.X, p2.position.Y), new Rectangle(518, 1760 + (bulletDamage - 1) * 4, 4, 4), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 0.9f);
-				}
-				foreach (Bullet p in enemyBullets)
-				{
-					b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(p.position.X, p.position.Y), new Rectangle(523, 1760, 5, 5), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 0.9f);
+					bullet.Draw(b);
 				}
 
 				//Draw shop
@@ -3026,7 +2467,7 @@ namespace MultiPlayerPrairie
 					}
 					else
 					{
-						int whichFrame = (playerBoundingBox.X - merchantBox.X > TileSize) ? 2 : ((merchantBox.X - playerBoundingBox.X > TileSize) ? 1 : 0);
+						int whichFrame = (player1.boundingBox.X - merchantBox.X > TileSize) ? 2 : ((merchantBox.X - player1.boundingBox.X > TileSize) ? 1 : 0);
 						b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(merchantBox.Location.X, merchantBox.Location.Y), new Rectangle(496 + whichFrame * 16, 1728, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, (float)merchantBox.Y / 10000f + 0.001f);
 						b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(merchantBox.Location.X - TileSize, merchantBox.Location.Y + TileSize), new Rectangle(529, 1744, 63, 32), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, (float)merchantBox.Y / 10000f + 0.001f);
 						foreach (KeyValuePair<Rectangle, ITEM_TYPE> v in storeItems)
@@ -3038,10 +2479,16 @@ namespace MultiPlayerPrairie
 						}
 					}
 				}
+
+				//Draw the arrow pointing down to the next map if the level is finished
 				if (waitingForPlayerToMoveDownAMap && (merchantShopOpen || !shopping) && shoppingTimer < 250)
 				{
 					b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(8.5f, 15f) * TileSize + new Vector2(-12f, 0f), new Rectangle(355, 1750, 8, 8), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 0.001f);
 				}
+
+				//Draw Players
+				player1.Draw(b);
+				player2.Draw(b);
 
 				// Draw all monsters
 				foreach (Enemy monster in monsters)
@@ -3049,6 +2496,7 @@ namespace MultiPlayerPrairie
 					monster.Draw(b);
 				}
 
+				//Draw the animation when transitioning to the next level
 				if (gopherRunning)
 				{
 					b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(gopherBox.X, gopherBox.Y), new Rectangle(320 + waveTimer / 100 % 4 * 16, 1792, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, (float)gopherBox.Y / 10000f + 0.001f);
@@ -3056,21 +2504,21 @@ namespace MultiPlayerPrairie
 				if (gopherTrain && gopherTrainPosition > -TileSize)
 				{
 					b.Draw(Game1.staminaRect, new Rectangle((int)topLeftScreenCoordinate.X, (int)topLeftScreenCoordinate.Y, 16 * TileSize, 16 * TileSize), Game1.staminaRect.Bounds, Color.Black, 0f, Vector2.Zero, SpriteEffects.None, 0.95f);
-					b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(playerPosition.X - (float)(TileSize / 2), gopherTrainPosition), new Rectangle(384 + gopherTrainPosition / 30 % 4 * 16, 1792, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 0.96f);
-					b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(playerPosition.X + (float)(TileSize / 2), gopherTrainPosition), new Rectangle(384 + gopherTrainPosition / 30 % 4 * 16, 1792, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 0.96f);
-					b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(playerPosition.X, gopherTrainPosition - TileSize * 3), new Rectangle(320 + gopherTrainPosition / 30 % 4 * 16, 1792, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 0.96f);
-					b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(playerPosition.X - (float)(TileSize / 2), gopherTrainPosition - TileSize), new Rectangle(400, 1728, 32, 32), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 0.97f);
-					if (holdItemTimer > 0)
+					b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(player1.position.X - (float)(TileSize / 2), gopherTrainPosition), new Rectangle(384 + gopherTrainPosition / 30 % 4 * 16, 1792, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 0.96f);
+					b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(player1.position.X + (float)(TileSize / 2), gopherTrainPosition), new Rectangle(384 + gopherTrainPosition / 30 % 4 * 16, 1792, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 0.96f);
+					b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(player1.position.X, gopherTrainPosition - TileSize * 3), new Rectangle(320 + gopherTrainPosition / 30 % 4 * 16, 1792, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 0.96f);
+					b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(player1.position.X - (float)(TileSize / 2), gopherTrainPosition - TileSize), new Rectangle(400, 1728, 32, 32), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 0.97f);
+					if (player1.IsHoldingItem())
 					{
-						b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + playerPosition + new Vector2(0f, -TileSize / 4), new Rectangle(384, 1760, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 0.98f);
-						b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + playerPosition + new Vector2(0f, -TileSize * 2 / 3) + new Vector2(0f, -TileSize / 4), new Rectangle(320 + (int)itemToHold * 16, 1776, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 0.99f);
+						b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + player1.position + new Vector2(0f, -TileSize / 4), new Rectangle(384, 1760, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 0.98f);
+						b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + player1.position + new Vector2(0f, -TileSize * 2 / 3) + new Vector2(0f, -TileSize / 4), new Rectangle(320 + (int)player1.GetHeldItem() * 16, 1776, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 0.99f);
 					}
 					else
 					{
-						b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + playerPosition + new Vector2(0f, -TileSize / 4), new Rectangle(464, 1760, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 0.98f);
+						b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + player1.position + new Vector2(0f, -TileSize / 4), new Rectangle(464, 1760, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 0.98f);
 					}
 				}
-				else
+				else // Draw the user interface
 				{
 					b.Draw(Game1.mouseCursors, topLeftScreenCoordinate - new Vector2(TileSize + 27, 0f), new Rectangle(294, 1782, 22, 22), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 0.25f);
 					if (heldItem != null)

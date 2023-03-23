@@ -181,7 +181,7 @@ namespace MultiplayerPrairieKing.Entities.Enemies
 							phaseInternalTimer = 9999;
 						}
 						Vector2 target = playerPosition;
-						if (!(gameInstance.deathTimer <= 0f))
+						if (!(gameInstance.player1.deathTimer <= 0f))
 						{
 							break;
 						}
@@ -247,9 +247,9 @@ namespace MultiplayerPrairieKing.Entities.Enemies
 						if (shootTimer < 0)
 						{
 							Vector2 trajectory = Utility.getVelocityTowardPoint(new Point(position.X + TileSize / 2, position.Y), playerPosition + new Vector2(TileSize / 2, TileSize / 2), 8f);
-							if (gameInstance.playerMovementDirections.Count > 0)
+							if (gameInstance.player1.movementDirections.Count > 0)
 							{
-								trajectory = Utility.getTranslatedVector2(trajectory, gameInstance.playerMovementDirections.Last(), 3f);
+								trajectory = Utility.getTranslatedVector2(trajectory, gameInstance.player1.movementDirections.Last(), 3f);
 							}
 
 							//gameInstance.enemyBullets.Add(new CowboyBullet(gameInstance, new Point(position.X + TileSize / 2, position.Y + TileSize / 2), new Point((int)trajectory.X, (int)trajectory.Y), 1));
