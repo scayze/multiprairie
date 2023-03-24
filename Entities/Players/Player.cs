@@ -9,36 +9,20 @@ using static MultiPlayerPrairie.GameMultiplayerPrairieKing;
 
 namespace MultiplayerPrairieKing.Entities
 {
-	public class Player
+	public class Player : Character
 	{
-		GameMultiplayerPrairieKing gameInstance;
-
 		public int runSpeedLevel;
 		public int fireSpeedLevel;
 		public int ammoLevel;
-		public Vector2 position;
-		public Rectangle boundingBox;
+
 		int shotTimer;
 		public int bulletDamage;
-		public bool isSelf;
-
 		public int shootingDelay = 300;
-
-		ITEM_TYPE itemToHold = ITEM_TYPE.NONE;
-
-		public float deathTimer;
-		int playerInvincibleTimer;
-		int holdItemTimer;
-		public int playerMotionAnimationTimer;
-		float playerFootstepSoundTimer = 200f;
-
-		public List<int> movementDirections = new();
-		public List<int> shootingDirections = new();
-
-		public Player(GameMultiplayerPrairieKing game, bool isSelf)
+		
+		
+		public Player(GameMultiplayerPrairieKing game) : base(game)
         {
-			this.gameInstance = game;
-			this.isSelf = isSelf;
+			ammoLevel = 0;
         }
 
 		public void ProcessInputs(Dictionary<GameKeys, int> _buttonHeldFrames)
@@ -116,27 +100,9 @@ namespace MultiplayerPrairieKing.Entities
 			}
 		}
 
-		private void AddMovementDirection(int direction)
-		{
-			if (!gameInstance.gopherTrain && !movementDirections.Contains(direction))
-			{
-				if (movementDirections.Count == 1)
-				{
-					_ = (movementDirections.ElementAt(0) + 2) % 4;
-				}
-				movementDirections.Add(direction);
-			}
-		}
 
-		private void AddShootingDirection(int direction)
-		{
-			if (!shootingDirections.Contains(direction))
-			{
-				shootingDirections.Add(direction);
-			}
-		}
 
-		public void Tick(GameTime time)
+		public override void Tick(GameTime time)
         {
 			//Timers
 			if (holdItemTimer > 0)
@@ -312,7 +278,7 @@ namespace MultiplayerPrairieKing.Entities
 
 		}
 
-		public void Draw(SpriteBatch b)
+		public override void Draw(SpriteBatch b)
         {
 			if (deathTimer <= 0f && (playerInvincibleTimer <= 0 || playerInvincibleTimer / 100 % 2 == 0))
 			{
@@ -327,160 +293,24 @@ namespace MultiplayerPrairieKing.Entities
 				}
 				else if (movementDirections.Count == 0 && shootingDirections.Count == 0)
 				{
-					if(isSelf) b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + position + new Vector2(0f, -TileSize / 4), new Rectangle(496, 1760, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, position.Y / 10000f + 0.001f);
-					else       b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + position + new Vector2(0f, -TileSize / 4), new Rectangle(256, 1728, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, gameInstance.player1.position.Y / 10000f + 0.001f);
+					b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + position + new Vector2(0f, -TileSize / 4), new Rectangle(496, 1760, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, position.Y / 10000f + 0.001f);
 				}
 				else
 				{
-					if(isSelf)
-                    {
-						int facingDirection = (shootingDirections.Count == 0) ? movementDirections.ElementAt(0) : shootingDirections.Last();
-						b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + position + new Vector2(0f, -TileSize / 4) + new Vector2(4f, 13f) * 3f, new Rectangle(483, 1760 + playerMotionAnimationTimer / 100 * 3, 10, 3), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, position.Y / 10000f + 0.001f + 0.001f);
-						b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + position + new Vector2(3f, -TileSize / 4), new Rectangle(464 + facingDirection * 16, 1744, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, position.Y / 10000f + 0.002f + 0.001f);
-
-					}
-					else
-                    {
-						int facingDirection = (shootingDirections.Count == 0) ? movementDirections[0] : shootingDirections[0];
-						b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + position + new Vector2(0f, -TileSize / 4) + new Vector2(4f, 13f) * 3f, new Rectangle(243, 1728 + playerMotionAnimationTimer / 100 * 3, 10, 3), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, position.Y / 10000f + 0.001f + 0.001f);
-						b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + position + new Vector2(0f, -TileSize / 4), new Rectangle(224 + facingDirection * 16, 1712, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, position.Y / 10000f + 0.002f + 0.001f);
-					}
+					int facingDirection = (shootingDirections.Count == 0) ? movementDirections.ElementAt(0) : shootingDirections.Last();
+					b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + position + new Vector2(0f, -TileSize / 4) + new Vector2(4f, 13f) * 3f, new Rectangle(483, 1760 + playerMotionAnimationTimer / 100 * 3, 10, 3), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, position.Y / 10000f + 0.001f + 0.001f);
+					b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + position + new Vector2(3f, -TileSize / 4), new Rectangle(464 + facingDirection * 16, 1744, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, position.Y / 10000f + 0.002f + 0.001f);
 				}
 			}
 		}
 
-		public void HoldItem(ITEM_TYPE item, int duration = 4000)
-        {
-			if (item != ITEM_TYPE.NONE)
-			{
-				itemToHold = item;
-			}
-			holdItemTimer = duration;
-		}
 
-		public bool IsHoldingItem()
-        {
-			return holdItemTimer > 0;
-        }
 
-		public ITEM_TYPE GetHeldItem()
+		public override void Die()
         {
-			return itemToHold;
-        }
-
-		public void SetInvincible(int duration)
-        {
-			playerInvincibleTimer = duration;
-        }
-
-		public bool IsInvincible()
-        {
-			return playerInvincibleTimer > 0;
-        }
-
-		public void Die()
-        {
-			deathTimer = 3000f;
+			base.Die();
 			SetInvincible(5000);
-
-			//Reset the player position (Different depending on boss or non boss level)
-			if (gameInstance.shootoutLevel)
-			{
-				position = new Vector2(8 * TileSize, 3 * TileSize);
-				Game1.playSound("Cowboy_monsterDie");
-			}
-			else
-			{
-				position = new Vector2(8 * TileSize - TileSize, 8 * TileSize);
-
-				boundingBox.X = (int)position.X + TileSize / 4;
-				boundingBox.Y = (int)position.Y + TileSize / 4;
-				boundingBox.Width = TileSize / 2;
-				boundingBox.Height = TileSize / 2;
-
-				Game1.playSound("cowboy_dead");
-			}
-
-			if(isSelf) gameInstance.NETmovePlayer(position);
+			gameInstance.NETmovePlayer(position);
 		}
-
-		public void TickSlave(GameTime time)
-		{
-			playerMotionAnimationTimer += time.ElapsedGameTime.Milliseconds;
-			playerMotionAnimationTimer %= 400;
-
-			if (playerInvincibleTimer > 0)
-			{
-				playerInvincibleTimer -= time.ElapsedGameTime.Milliseconds;
-			}
-			if (deathTimer > 0)
-			{
-				deathTimer -= time.ElapsedGameTime.Milliseconds;
-			}
-
-			if (movementDirections.Count > 0)
-			{
-				float speed = GetMovementSpeed(3f, movementDirections.Count);
-				for (int j = 0; j < movementDirections.Count; j++)
-				{
-					Vector2 newPlayerPosition = position;
-					switch (movementDirections[j])
-					{
-						case 0:
-							newPlayerPosition.Y -= speed;
-							break;
-						case 3:
-							newPlayerPosition.X -= speed;
-							break;
-						case 2:
-							newPlayerPosition.Y += speed;
-							break;
-						case 1:
-							newPlayerPosition.X += speed;
-							break;
-					}
-					Rectangle newPlayerBox = new((int)newPlayerPosition.X + TileSize / 4, (int)newPlayerPosition.Y + TileSize / 4, TileSize / 2, TileSize / 2);
-				}
-				boundingBox.X = (int)position.X + TileSize / 4;
-				boundingBox.Y = (int)position.Y + TileSize / 4;
-				boundingBox.Width = TileSize / 2;
-				boundingBox.Height = TileSize / 2;
-
-				playerFootstepSoundTimer -= time.ElapsedGameTime.Milliseconds;
-				if (playerFootstepSoundTimer <= 0)
-				{
-					Game1.playSound("Cowboy_Footstep");
-					playerFootstepSoundTimer = 200;
-				}
-			}
-		}
-
-		//On die
-		/*
-		 if (playingWithAbigail && i < monsters.Count && monsters[i].position.Intersects(player2.boundingBox) && player2invincibletimer <= 0)
-		{
-			//TODO player 2 death
-			Game1.playSound("Cowboy_monsterDie");
-			player2deathtimer = 3000;
-			temporarySprites.Add(new TemporaryAnimatedSprite("LooseSprites\\Cursors", new Rectangle(464, 1808, 16, 16), 120f, 5, 0, player2.position + topLeftScreenCoordinate + new Vector2(TileSize / 2, TileSize / 2), flicker: false, flipped: false, 1f, 0f, Color.White, 3f, 0f, 0f, 0f, local: true));
-			player2invincibletimer = 4000;
-			player2.position = new Vector2(8f, 8f) * TileSize;
-			player2.boundingBox.X = (int)player2.position.X + TileSize / 4;
-			player2.boundingBox.Y = (int)player2.position.Y + TileSize / 4;
-			player2.boundingBox.Width = TileSize / 2;
-			player2.boundingBox.Height = TileSize / 2;
-			/*
-			if (player1.boundingBox.Intersects(player2.boundingBox))
-			{
-				player2.position.X = player1.boundingBox.Right + 2;
-			}
-
-			player2.boundingBox.X = (int) player2.position.X + TileSize / 4;
-			player2.boundingBox.Y = (int) player2.position.Y + TileSize / 4;
-			player2.boundingBox.Width = TileSize / 2;
-			player2.boundingBox.Height = TileSize / 2;
-		}
-		*/
-
 	}
 }

@@ -202,7 +202,7 @@ namespace MultiPlayerPrairie
 
 		public Player player1;
 
-		public Player player2;
+		public PlayerSlave player2;
 
 		public int runSpeedLevel;
 
@@ -268,8 +268,6 @@ namespace MultiPlayerPrairie
 
 		public float cactusDanceTimer;
 
-
-
 		public behaviorAfterMotionPause behaviorAfterPause;
 
 		public List<Vector2> monsterChances = new()
@@ -293,7 +291,7 @@ namespace MultiPlayerPrairie
 
 		public Powerup heldItem;
 
-		public int world = 0;
+		public MAP_TYPE world = MAP_TYPE.desert;
 
 		public int gameOverOption;
 
@@ -400,7 +398,7 @@ namespace MultiPlayerPrairie
 			whichRound = save_data.whichRound.Value;
 			whichWave = save_data.whichWave.Value;
 			waveTimer = save_data.waveTimer.Value;
-			world = save_data.world.Value;
+			world = (MAP_TYPE)save_data.world.Value;
 			if (save_data.heldItem.Value != -100)
 			{
 				heldItem = new Powerup(this, (POWERUP_TYPE)save_data.heldItem.Value, Point.Zero, 9999);
@@ -435,7 +433,7 @@ namespace MultiPlayerPrairie
 				save_data.whichRound.Value = whichRound;
 				save_data.whichWave.Value = whichWave;
 				save_data.waveTimer.Value = waveTimer;
-				save_data.world.Value = world;
+				save_data.world.Value = (int)world;
 				save_data.monsterChances.Clear();
 				save_data.monsterChances.AddRange(monsterChances);
 				if (heldItem == null)
@@ -508,8 +506,8 @@ namespace MultiPlayerPrairie
 			betweenWaveTimer = 5000;
 			gopherRunning = false;
 			hasGopherAppeared = false;
-			player1 = new(this, isSelf: true);
-			player2 = new(this, isSelf: false);
+			player1 = new(this);
+			player2 = new(this);
 			outlawSong = null;
 			overworldSong = null;
 			endCutscene = false;
@@ -694,7 +692,7 @@ namespace MultiPlayerPrairie
 					{
 						Point teleportSpot = Point.Zero;
 						int tries = 0;
-						while ((Math.Abs((float)teleportSpot.X - player1.position.X) < 8f || Math.Abs((float)teleportSpot.Y - player1.position.Y) < 8f || IsCollidingWithMap(teleportSpot) || IsCollidingWithMonster(new Rectangle(teleportSpot.X, teleportSpot.Y, TileSize, TileSize), null)) && tries < 10)
+						while ((Math.Abs(teleportSpot.X - player1.position.X) < 8f || Math.Abs(teleportSpot.Y - player1.position.Y) < 8f || IsCollidingWithMap(teleportSpot) || IsCollidingWithMonster(new Rectangle(teleportSpot.X, teleportSpot.Y, TileSize, TileSize), null)) && tries < 10)
 						{
 							teleportSpot = new Point(Game1.random.Next(TileSize, 16 * TileSize - TileSize), Game1.random.Next(TileSize, 16 * TileSize - TileSize));
 							tries++;
@@ -1288,15 +1286,19 @@ namespace MultiPlayerPrairie
 
 			//TODO tick really here?
 			player1.Tick(time);
-			//player2.Tick(time);
+			player2.Tick(time);
 
 			//Dont stop if the player is still holding up the item?
 			if (player1.IsHoldingItem()) return false;
 
+			
+			//Screen flash timer
 			if (screenFlash > 0)
 			{
 				screenFlash -= time.ElapsedGameTime.Milliseconds;
 			}
+
+			//Weird gopher train shit
 			if (gopherTrain)
 			{
 				gopherTrainPosition += 3;
@@ -1324,7 +1326,7 @@ namespace MultiPlayerPrairie
 					//NET Player Move
 					NETmovePlayer(player1.position);
 
-					world = ((world != 0) ? 1 : 2);
+					world = ((world != MAP_TYPE.desert) ? MAP_TYPE.graveyard : MAP_TYPE.woods);
 					waveTimer = 80000;
 					betweenWaveTimer = 5000;
 					waitingForPlayerToMoveDownAMap = false;
@@ -1332,6 +1334,8 @@ namespace MultiPlayerPrairie
 					SaveGame();
 				}
 			}
+
+			//
 			if ((shopping || merchantArriving || waitingForPlayerToMoveDownAMap) && !player1.IsHoldingItem())
 			{
 				int oldTimer = shoppingTimer;
@@ -1366,6 +1370,8 @@ namespace MultiPlayerPrairie
 				player2.boundingBox.Width = TileSize / 2;
 				player2.boundingBox.Height = TileSize / 2;
 				player2.movementDirections = new List<int> { 2 };
+				player2.playerMotionAnimationTimer += time.ElapsedGameTime.Milliseconds;
+				player2.playerMotionAnimationTimer %= 400;
 
 				//Swap to the next map once the map is loaded
 				if (newMapPosition <= 0)
@@ -1530,6 +1536,7 @@ namespace MultiPlayerPrairie
 				cactusDanceTimer %= 1600f;
 
 				UpdateBullets(time);
+
 				foreach (Powerup powerup in powerups)
 				{
 					Vector2 tile_position = new((powerup.position.X + TileSize / 2) / TileSize, (powerup.position.Y + TileSize / 2) / TileSize);
@@ -1552,6 +1559,7 @@ namespace MultiPlayerPrairie
 						powerup.position.Y -= push_direction.Y;
 					}
 				}
+
 				if (waveTimer > 0 && betweenWaveTimer <= 0 && zombieModeTimer <= 0 && !shootoutLevel && (overworldSong == null || !overworldSong.IsPlaying) && Game1.soundBank != null)
 				{
 					overworldSong = Game1.soundBank.GetCue("Cowboy_OVERWORLD");
@@ -1771,10 +1779,7 @@ namespace MultiPlayerPrairie
 						
 					}
 				}
-				if (playingWithAbigail)
-				{
-					player2.TickSlave(time);
-				}
+
 				for (int i = monsters.Count - 1; i >= 0; i--)
 				{
 					// Target the closest player
@@ -2383,7 +2388,7 @@ namespace MultiPlayerPrairie
 							{
 								for (int y = 0; y < 16; y++)
 								{
-									b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(x, y) * 16f * 3f + new Vector2(0f, newMapPosition - 16 * TileSize), new Rectangle(464 + 16 * (int)map[x, y] + ((map[x, y] == MAP_TILE.CACTUS && cactusDanceTimer > 800f) ? 16 : 0), 1680 - world * 16, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 0f);
+									b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(x, y) * 16f * 3f + new Vector2(0f, newMapPosition - 16 * TileSize), new Rectangle(464 + 16 * (int)map[x, y] + ((map[x, y] == MAP_TILE.CACTUS && cactusDanceTimer > 800f) ? 16 : 0), 1680 - (int)world * 16, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 0f);
 								}
 							}
 							b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(6 * TileSize, 3 * TileSize), new Rectangle(288, 1697, 64, 80), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 0.01f);
@@ -2424,7 +2429,7 @@ namespace MultiPlayerPrairie
 				{
 					for (int y = 0; y < 16; y++)
 					{
-						b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(x, y) * 16f * 3f + new Vector2(0f, newMapPosition - 16 * TileSize), new Rectangle(464 + 16 * (int)map[x, y] + ((map[x, y] == MAP_TILE.CACTUS && cactusDanceTimer > 800f) ? 16 : 0), 1680 - world * 16, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 0f);
+						b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(x, y) * 16f * 3f + new Vector2(0f, newMapPosition - 16 * TileSize), new Rectangle(464 + 16 * (int)map[x, y] + ((map[x, y] == MAP_TILE.CACTUS && cactusDanceTimer > 800f) ? 16 : 0), 1680 - (int)world * 16, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 0f);
 					}
 				}
 				if (scrollingMap)
@@ -2433,7 +2438,7 @@ namespace MultiPlayerPrairie
 					{
 						for (int y = 0; y < 16; y++)
 						{
-							b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(x, y) * 16f * 3f + new Vector2(0f, newMapPosition), new Rectangle(464 + 16 * (int)nextMap[x, y] + ((nextMap[x, y] == MAP_TILE.CACTUS && cactusDanceTimer > 800f) ? 16 : 0), 1680 - world * 16, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 0f);
+							b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(x, y) * 16f * 3f + new Vector2(0f, newMapPosition), new Rectangle(464 + 16 * (int)nextMap[x, y] + ((nextMap[x, y] == MAP_TILE.CACTUS && cactusDanceTimer > 800f) ? 16 : 0), 1680 - (int)world * 16, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 0f);
 						}
 					}
 					b.Draw(Game1.staminaRect, new Rectangle((int)topLeftScreenCoordinate.X, -1, 16 * TileSize, (int)topLeftScreenCoordinate.Y), Game1.staminaRect.Bounds, Color.Black, 0f, Vector2.Zero, SpriteEffects.None, 1f);
