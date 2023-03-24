@@ -100,21 +100,9 @@ namespace MultiplayerPrairieKing.Entities
 			}
 		}
 
-
-
 		public override void Tick(GameTime time)
         {
-			//Timers
-			if (holdItemTimer > 0)
-			{
-				holdItemTimer -= time.ElapsedGameTime.Milliseconds;
-			}
-
-			if (playerInvincibleTimer > 0)
-			{
-				playerInvincibleTimer -= time.ElapsedGameTime.Milliseconds;
-			}
-
+			base.Tick(time);
 			//Shotting
 			if (shotTimer > 0)
 			{
@@ -228,20 +216,12 @@ namespace MultiplayerPrairieKing.Entities
 				//????
 				playerMotionAnimationTimer += time.ElapsedGameTime.Milliseconds;
 				playerMotionAnimationTimer %= 400;
-				playerFootstepSoundTimer -= time.ElapsedGameTime.Milliseconds;
-
-				//Play footstep sound every once in a while
-				if (playerFootstepSoundTimer <= 0f)
-				{
-					Game1.playSound("Cowboy_Footstep");
-					playerFootstepSoundTimer = 200f;
-				}
 
 				//Pick up powerups
 				for (int i = gameInstance.powerups.Count - 1; i >= 0; i--)
 				{
 					Powerup powerup = gameInstance.powerups[i];
-					Rectangle powerupRect = new Rectangle(powerup.position.X, gameInstance.powerups[i].position.Y, TileSize, TileSize);
+					Rectangle powerupRect = new(powerup.position.X, gameInstance.powerups[i].position.Y, TileSize, TileSize);
 
 					if (boundingBox.Intersects(powerupRect) && !boundingBox.Intersects(gameInstance.noPickUpBox))
 					{
@@ -256,7 +236,7 @@ namespace MultiplayerPrairieKing.Entities
 							gameInstance.UsePowerup(powerup.which);
 							gameInstance.powerups.RemoveAt(i);
 						}
-						else if (gameInstance.GetPowerUp(powerup))
+						else if (gameInstance.PickupPowerup(powerup))
 						{
 							gameInstance.powerups.RemoveAt(i);
 						}

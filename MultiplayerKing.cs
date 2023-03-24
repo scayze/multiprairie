@@ -10,6 +10,7 @@ using StardewValley.Objects;
 using HarmonyLib;
 using MultiplayerPrairieKing.Entities;
 using MultiplayerPrairieKing.Entities.Enemies;
+using static MultiPlayerPrairie.GameMultiplayerPrairieKing;
 
 namespace MultiPlayerPrairie
 {
@@ -258,7 +259,7 @@ namespace MultiPlayerPrairie
             {
                 case "PK_PowerupSpawn":
                     PK_PowerupSpawn mPowerupSpawn = e.ReadAs<PK_PowerupSpawn>();
-                    GameMultiplayerPrairieKing.POWERUP_TYPE powerupType = (GameMultiplayerPrairieKing.POWERUP_TYPE)mPowerupSpawn.which;
+                    POWERUP_TYPE powerupType = (POWERUP_TYPE)mPowerupSpawn.which;
                     //public CowboyPowerup(GameMultiplayerPrairieKing game, int which, Point position, int duration)
                     if (!PK_game.isHost)
                     {
@@ -271,21 +272,6 @@ namespace MultiPlayerPrairie
                 case "PK_PowerupPickup":
                     PK_PowerupPickup mPowerupPickup = e.ReadAs<PK_PowerupPickup>();
 
-                    //Coins should be given both players as value
-                    if (mPowerupPickup.which == (int)GameMultiplayerPrairieKing.POWERUP_TYPE.COIN)
-                    {
-                        PK_game.UsePowerup(GameMultiplayerPrairieKing.POWERUP_TYPE.COIN);
-                    }
-                    if (mPowerupPickup.which == (int)GameMultiplayerPrairieKing.POWERUP_TYPE.NICKEL)
-                    {
-                        PK_game.UsePowerup(GameMultiplayerPrairieKing.POWERUP_TYPE.NICKEL);
-                    }
-                    //Health should be given both players too
-                    if (mPowerupPickup.which == (int)GameMultiplayerPrairieKing.POWERUP_TYPE.LIFE)
-                    {
-                        PK_game.UsePowerup(GameMultiplayerPrairieKing.POWERUP_TYPE.LIFE);
-                    }
-
                     for (int i = PK_game.powerups.Count - 1; i >= 0; i--)
                     {
                         Powerup powerup = PK_game.powerups[i];
@@ -294,6 +280,11 @@ namespace MultiPlayerPrairie
                             PK_game.powerups.RemoveAt(i);
                         }
                     }
+                    break;
+
+                case "PK_UsePowerup":
+                    PK_UsePowerup mPowerupUse = e.ReadAs<PK_UsePowerup>();
+                    PK_game.UsePowerup((POWERUP_TYPE)mPowerupUse.type, true);
                     break;
 
                 case "PK_PlayerMove":
@@ -336,15 +327,15 @@ namespace MultiPlayerPrairie
 
                 case "PK_EnemySpawn":
                     PK_EnemySpawn mEnemySpawn = e.ReadAs<PK_EnemySpawn>();
-                    GameMultiplayerPrairieKing.MONSTER_TYPE monsterType = (GameMultiplayerPrairieKing.MONSTER_TYPE)mEnemySpawn.which;
+                    MONSTER_TYPE monsterType = (MONSTER_TYPE)mEnemySpawn.which;
 
-                    if (mEnemySpawn.which == (int)GameMultiplayerPrairieKing.MONSTER_TYPE.outlaw)
+                    if (mEnemySpawn.which == (int)MONSTER_TYPE.outlaw)
                     {
-                        Outlaw outlaw = new(PK_game, mEnemySpawn.position, mEnemySpawn.health);
+                        Outlaw outlaw = new(PK_game, mEnemySpawn.position);
                         outlaw.id = mEnemySpawn.id;
                         PK_game.monsters.Add(outlaw);
                     }
-                    else if (mEnemySpawn.which == (int)GameMultiplayerPrairieKing.MONSTER_TYPE.dracula)
+                    else if (mEnemySpawn.which == (int)MONSTER_TYPE.dracula)
                     {
                         Dracula dracula = new(PK_game);
                         dracula.id = mEnemySpawn.id;
@@ -389,10 +380,6 @@ namespace MultiPlayerPrairie
                     PK_game.StartLevelTransition();
                     break;
 
-                case "PK_StartGopherTrain":
-                    PK_game.StartGopherTrain();
-                    break;
-
                 case "PK_EnemyKilled":
                     PK_EnemyKilled mEnemyKilled = e.ReadAs<PK_EnemyKilled>();
 
@@ -433,6 +420,11 @@ namespace MultiPlayerPrairie
     {
         public long id = -69;
         public int which = -69;
+        public int type = -69;
+    }
+
+    public class PK_UsePowerup
+    {
         public int type = -69;
     }
 
@@ -525,11 +517,6 @@ namespace MultiPlayerPrairie
     }
 
     public class PK_JoinLobby
-    {
-
-    }
-
-    public class PK_StartGopherTrain
     {
 
     }

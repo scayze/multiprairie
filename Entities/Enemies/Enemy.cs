@@ -124,6 +124,9 @@ namespace MultiplayerPrairieKing.Entities
 						while (gameInstance.IsCollidingWithMap(targetPosition) && tries < 10);
 						break;
 					}
+				case MONSTER_TYPE.outlaw:
+					health = (gameInstance.world == 0) ? 50 : 100;
+					break;
 			}
 			oppositeMotionGuy = (Game1.random.NextDouble() < 0.5);
 
@@ -137,6 +140,7 @@ namespace MultiplayerPrairieKing.Entities
 				message.id = this.id;
 				message.which = (int)which;
 				message.position = position;
+				message.health = health;
 				game.modInstance.Helper.Multiplayer.SendMessage(message, "PK_EnemySpawn");
 			}
 		}
@@ -291,8 +295,8 @@ namespace MultiplayerPrairieKing.Entities
 						Vector2 target2 = (!targetPosition.Equals(Point.Zero)) ? new Vector2(targetPosition.X, targetPosition.Y) : playerPosition;
 						if (gameInstance.playingWithAbigail && target2.Equals(playerPosition))
 						{
-							double distanceToPlayer = Math.Sqrt(Math.Pow((float)position.X - target2.X, 2.0) - Math.Pow((float)position.Y - target2.Y, 2.0));
-							if (Math.Sqrt(Math.Pow((float)position.X - gameInstance.player2.position.X, 2.0) - Math.Pow((float)position.Y - gameInstance.player2.position.Y, 2.0)) < distanceToPlayer)
+							double distanceToPlayer = Math.Sqrt(Math.Pow(position.X - target2.X, 2.0) - Math.Pow(position.Y - target2.Y, 2.0));
+							if (Math.Sqrt(Math.Pow(position.X - gameInstance.player2.position.X, 2.0) - Math.Pow(position.Y - gameInstance.player2.position.Y, 2.0)) < distanceToPlayer)
 							{
 								target2 = gameInstance.player2.position;
 							}
@@ -305,38 +309,38 @@ namespace MultiplayerPrairieKing.Entities
 						{
 							oppositeMotionGuy = !oppositeMotionGuy;
 						}
-						if ((type == MONSTER_TYPE.spikey && !oppositeMotionGuy) || Math.Abs(target2.X - (float)position.X) > Math.Abs(target2.Y - (float)position.Y))
+						if ((type == MONSTER_TYPE.spikey && !oppositeMotionGuy) || Math.Abs(target2.X - position.X) > Math.Abs(target2.Y - position.Y))
 						{
-							if (target2.X + (float)speed < (float)position.X && (movedLastTurn || movementDirection != 3))
+							if (target2.X + speed < position.X && (movedLastTurn || movementDirection != 3))
 							{
 								movementDirection = 3;
 							}
-							else if (target2.X > (float)(position.X + speed) && (movedLastTurn || movementDirection != 1))
+							else if (target2.X > (position.X + speed) && (movedLastTurn || movementDirection != 1))
 							{
 								movementDirection = 1;
 							}
-							else if (target2.Y > (float)(position.Y + speed) && (movedLastTurn || movementDirection != 2))
+							else if (target2.Y > (position.Y + speed) && (movedLastTurn || movementDirection != 2))
 							{
 								movementDirection = 2;
 							}
-							else if (target2.Y + (float)speed < (float)position.Y && (movedLastTurn || movementDirection != 0))
+							else if (target2.Y + speed < position.Y && (movedLastTurn || movementDirection != 0))
 							{
 								movementDirection = 0;
 							}
 						}
-						else if (target2.Y > (float)(position.Y + speed) && (movedLastTurn || movementDirection != 2))
+						else if (target2.Y > (position.Y + speed) && (movedLastTurn || movementDirection != 2))
 						{
 							movementDirection = 2;
 						}
-						else if (target2.Y + (float)speed < (float)position.Y && (movedLastTurn || movementDirection != 0))
+						else if (target2.Y + speed < position.Y && (movedLastTurn || movementDirection != 0))
 						{
 							movementDirection = 0;
 						}
-						else if (target2.X + (float)speed < (float)position.X && (movedLastTurn || movementDirection != 3))
+						else if (target2.X + speed < position.X && (movedLastTurn || movementDirection != 3))
 						{
 							movementDirection = 3;
 						}
-						else if (target2.X > (float)(position.X + speed) && (movedLastTurn || movementDirection != 1))
+						else if (target2.X > (position.X + speed) && (movedLastTurn || movementDirection != 1))
 						{
 							movementDirection = 1;
 						}

@@ -83,8 +83,29 @@ namespace MultiplayerPrairieKing.Entities
 
 		public virtual void Tick(GameTime time)
         {
+			if (playerInvincibleTimer > 0)
+			{
+				playerInvincibleTimer -= time.ElapsedGameTime.Milliseconds;
+			}
+			if (deathTimer > 0)
+			{
+				deathTimer -= time.ElapsedGameTime.Milliseconds;
+			}
+			if (holdItemTimer > 0)
+			{
+				holdItemTimer -= time.ElapsedGameTime.Milliseconds;
+			}
 
-        }
+			if (movementDirections.Count > 0)
+			{
+				playerFootstepSoundTimer -= time.ElapsedGameTime.Milliseconds;
+				if (playerFootstepSoundTimer <= 0)
+				{
+					Game1.playSound("Cowboy_Footstep");
+					playerFootstepSoundTimer = 200;
+				}
+			}
+		}
 
 		public virtual void Draw(SpriteBatch b)
         {

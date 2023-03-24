@@ -2,11 +2,6 @@
 using Microsoft.Xna.Framework.Graphics;
 using MultiPlayerPrairie;
 using StardewValley;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using static MultiPlayerPrairie.GameMultiplayerPrairieKing;
 
 namespace MultiplayerPrairieKing.Entities
@@ -42,7 +37,7 @@ namespace MultiplayerPrairieKing.Entities
 			this.id = gameInstance.modInstance.Helper.Multiplayer.GetNewID();
 
 			PK_PowerupSpawn mPowerup = new();
-			mPowerup.id = this.id = gameInstance.modInstance.Helper.Multiplayer.GetNewID();
+			mPowerup.id = this.id;
 			mPowerup.which = (int)this.which;
 			mPowerup.position = this.position;
 			mPowerup.duration = this.duration;

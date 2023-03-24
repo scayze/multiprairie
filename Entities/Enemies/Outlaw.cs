@@ -42,16 +42,13 @@ namespace MultiplayerPrairieKing.Entities.Enemies
 
 		public Point homePosition;
 
-		public Outlaw(GameMultiplayerPrairieKing game, Point position, int health)
+		public Outlaw(GameMultiplayerPrairieKing game, Point position)
 			: base(game, MONSTER_TYPE.outlaw, position)
 		{
 			homePosition = position;
-			base.health = health;
 			fullHealth = health;
 			phaseCountdown = 4000;
 			phase = -1;
-
-
 		}
 
 		public override void Draw(SpriteBatch b)

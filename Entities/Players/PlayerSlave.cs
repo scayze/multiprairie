@@ -14,17 +14,10 @@ namespace MultiplayerPrairieKing.Entities
 
         public override void Tick(GameTime time)
 		{
+			base.Tick(time);
+
 			playerMotionAnimationTimer += time.ElapsedGameTime.Milliseconds;
 			playerMotionAnimationTimer %= 400;
-
-			if (playerInvincibleTimer > 0)
-			{
-				playerInvincibleTimer -= time.ElapsedGameTime.Milliseconds;
-			}
-			if (deathTimer > 0)
-			{
-				deathTimer -= time.ElapsedGameTime.Milliseconds;
-			}
 
 			if (movementDirections.Count > 0)
 			{
@@ -47,19 +40,11 @@ namespace MultiplayerPrairieKing.Entities
 							newPlayerPosition.X += speed;
 							break;
 					}
-					Rectangle newPlayerBox = new((int)newPlayerPosition.X + TileSize / 4, (int)newPlayerPosition.Y + TileSize / 4, TileSize / 2, TileSize / 2);
 				}
 				boundingBox.X = (int)position.X + TileSize / 4;
 				boundingBox.Y = (int)position.Y + TileSize / 4;
 				boundingBox.Width = TileSize / 2;
 				boundingBox.Height = TileSize / 2;
-
-				playerFootstepSoundTimer -= time.ElapsedGameTime.Milliseconds;
-				if (playerFootstepSoundTimer <= 0)
-				{
-					Game1.playSound("Cowboy_Footstep");
-					playerFootstepSoundTimer = 200;
-				}
 			}
 		}
 

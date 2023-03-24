@@ -61,7 +61,7 @@ namespace MultiPlayerPrairie
 			modInstance.Helper.Multiplayer.SendMessage(completeLevel, "PK_CompleteLevel");
         }
 
-		public void NETspawnBullet(bool friendly, Point position, Point motion, int damage)
+        public void NETspawnBullet(bool friendly, Point position, Point motion, int damage)
 		{
 			Bullet bullet = new(this, friendly, position, motion, damage);
 			bullets.Add(bullet);
@@ -577,7 +577,7 @@ namespace MultiPlayerPrairie
 			return movementSpeed;
 		}
 
-		public bool GetPowerUp(Powerup c)
+		public bool PickupPowerup(Powerup c)
 		{
 			switch (c.which)
 			{
@@ -591,16 +591,13 @@ namespace MultiPlayerPrairie
 					UsePowerup(POWERUP_TYPE.LOG);
 					break;
 				case POWERUP_TYPE.COIN:
-					coins++;
-					Game1.playSound("Pickup_Coin15");
+					UsePowerup(POWERUP_TYPE.COIN);
 					break;
 				case POWERUP_TYPE.NICKEL:
-					coins += 5;
-					Game1.playSound("Pickup_Coin15");
+					UsePowerup(POWERUP_TYPE.NICKEL);
 					break;
 				case POWERUP_TYPE.LIFE:
-					lives++;
-					Game1.playSound("cowboy_powerup");
+					UsePowerup(POWERUP_TYPE.LIFE);
 					break;
 				default:
 					{
@@ -627,8 +624,16 @@ namespace MultiPlayerPrairie
 			return Game1.options.SnappyMenus;
 		}
 
-		public void UsePowerup(POWERUP_TYPE which)
+		public void UsePowerup(POWERUP_TYPE which, bool visualOnly = false)
 		{
+			//If not visual only (aka sync call for player 2), send network message
+			if(!visualOnly)
+            {
+				PK_UsePowerup mUsePowerup = new();
+				mUsePowerup.type = (int)which;
+				modInstance.Helper.Multiplayer.SendMessage(mUsePowerup, "PK_UsePowerup");
+			}
+
 			if (activePowerups.ContainsKey(which))
 			{
 				activePowerups[which] = powerupDuration + 2000;
@@ -638,6 +643,7 @@ namespace MultiPlayerPrairie
 			switch (which)
 			{
 				case POWERUP_TYPE.HEART:
+					if (visualOnly) break;
 					player1.HoldItem(ITEM_TYPE.FINISHED_GAME, 4000);
 					Game1.playSound("Cowboy_Secret");
 					endCutscene = true;
@@ -648,31 +654,26 @@ namespace MultiPlayerPrairie
 						Game1.addMailForTomorrow("Beat_PK");
 					}
 					break;
-				case POWERUP_TYPE.SKULL:
-					//NET Start Gopher Train
-					PK_StartGopherTrain mStartTrainSkull = new();
-					modInstance.Helper.Multiplayer.SendMessage(mStartTrainSkull, "PK_StartGopherTrain");
 
+				case POWERUP_TYPE.SKULL:
 					StartGopherTrain(ITEM_TYPE.SKULL);
 					break;
-				case POWERUP_TYPE.LOG:
-					//NET Start Gopher Train
-					PK_StartGopherTrain mStartTrainLog = new();
-					modInstance.Helper.Multiplayer.SendMessage(mStartTrainLog, "PK_StartGopherTrain");
 
+				case POWERUP_TYPE.LOG:
 					StartGopherTrain(ITEM_TYPE.LOG);
 					break;
+
 				case POWERUP_TYPE.SHERRIFF:
+					if (visualOnly) break;
+					UsePowerup(POWERUP_TYPE.SHOTGUN);
+					UsePowerup(POWERUP_TYPE.RAPIDFIRE);
+					UsePowerup(POWERUP_TYPE.SPEED);
+					for (int j = 0; j < activePowerups.Count; j++)
 					{
-						UsePowerup(POWERUP_TYPE.SHOTGUN);
-						UsePowerup(POWERUP_TYPE.RAPIDFIRE);
-						UsePowerup(POWERUP_TYPE.SPEED);
-						for (int j = 0; j < activePowerups.Count; j++)
-						{
-							activePowerups[activePowerups.ElementAt(j).Key] *= 2;
-						}
-						break;
+						activePowerups[activePowerups.ElementAt(j).Key] *= 2;
 					}
+					break;
+
 				case POWERUP_TYPE.ZOMBIE:
 					if (overworldSong != null && overworldSong.IsPlaying)
 					{
@@ -688,82 +689,95 @@ namespace MultiPlayerPrairie
 					motionPause = 1800;
 					zombieModeTimer = 10000;
 					break;
+
 				case POWERUP_TYPE.TELEPORT:
+					if (visualOnly) break; //TODO: Sync telport visuals, but bro cringe
+
+					Point teleportSpot = Point.Zero;
+					int tries = 0;
+					while ((Math.Abs(teleportSpot.X - player1.position.X) < 8f || Math.Abs(teleportSpot.Y - player1.position.Y) < 8f || IsCollidingWithMap(teleportSpot) || IsCollidingWithMonster(new Rectangle(teleportSpot.X, teleportSpot.Y, TileSize, TileSize), null)) && tries < 10)
 					{
-						Point teleportSpot = Point.Zero;
-						int tries = 0;
-						while ((Math.Abs(teleportSpot.X - player1.position.X) < 8f || Math.Abs(teleportSpot.Y - player1.position.Y) < 8f || IsCollidingWithMap(teleportSpot) || IsCollidingWithMonster(new Rectangle(teleportSpot.X, teleportSpot.Y, TileSize, TileSize), null)) && tries < 10)
-						{
-							teleportSpot = new Point(Game1.random.Next(TileSize, 16 * TileSize - TileSize), Game1.random.Next(TileSize, 16 * TileSize - TileSize));
-							tries++;
-						}
-						if (tries < 10)
-						{
-							temporarySprites.Add(new TemporaryAnimatedSprite("LooseSprites\\Cursors", new Rectangle(464, 1792, 16, 16), 120f, 5, 0, player1.position + topLeftScreenCoordinate + new Vector2(TileSize / 2, TileSize / 2), flicker: false, flipped: false, 1f, 0f, Color.White, 3f, 0f, 0f, 0f, local: true));
-							temporarySprites.Add(new TemporaryAnimatedSprite("LooseSprites\\Cursors", new Rectangle(464, 1792, 16, 16), 120f, 5, 0, new Vector2(teleportSpot.X, teleportSpot.Y) + topLeftScreenCoordinate + new Vector2(TileSize / 2, TileSize / 2), flicker: false, flipped: false, 1f, 0f, Color.White, 3f, 0f, 0f, 0f, local: true));
-							temporarySprites.Add(new TemporaryAnimatedSprite("LooseSprites\\Cursors", new Rectangle(464, 1792, 16, 16), 120f, 5, 0, new Vector2(teleportSpot.X - TileSize / 2, teleportSpot.Y) + topLeftScreenCoordinate + new Vector2(TileSize / 2, TileSize / 2), flicker: false, flipped: false, 1f, 0f, Color.White, 3f, 0f, 0f, 0f, local: true)
-							{
-								delayBeforeAnimationStart = 200
-							});
-							temporarySprites.Add(new TemporaryAnimatedSprite("LooseSprites\\Cursors", new Rectangle(464, 1792, 16, 16), 120f, 5, 0, new Vector2(teleportSpot.X + TileSize / 2, teleportSpot.Y) + topLeftScreenCoordinate + new Vector2(TileSize / 2, TileSize / 2), flicker: false, flipped: false, 1f, 0f, Color.White, 3f, 0f, 0f, 0f, local: true)
-							{
-								delayBeforeAnimationStart = 400
-							});
-							temporarySprites.Add(new TemporaryAnimatedSprite("LooseSprites\\Cursors", new Rectangle(464, 1792, 16, 16), 120f, 5, 0, new Vector2(teleportSpot.X, teleportSpot.Y - TileSize / 2) + topLeftScreenCoordinate + new Vector2(TileSize / 2, TileSize / 2), flicker: false, flipped: false, 1f, 0f, Color.White, 3f, 0f, 0f, 0f, local: true)
-							{
-								delayBeforeAnimationStart = 600
-							});
-							temporarySprites.Add(new TemporaryAnimatedSprite("LooseSprites\\Cursors", new Rectangle(464, 1792, 16, 16), 120f, 5, 0, new Vector2(teleportSpot.X, teleportSpot.Y + TileSize / 2) + topLeftScreenCoordinate + new Vector2(TileSize / 2, TileSize / 2), flicker: false, flipped: false, 1f, 0f, Color.White, 3f, 0f, 0f, 0f, local: true)
-							{
-								delayBeforeAnimationStart = 800
-							});
-							player1.position = new Vector2(teleportSpot.X, teleportSpot.Y);
-
-							//NET Player Move
-							NETmovePlayer(player1.position);
-
-							monsterConfusionTimer = 4000;
-							player1.SetInvincible(4000);
-							Game1.playSound("cowboy_powerup");
-						}
-						break;
+						teleportSpot = new Point(Game1.random.Next(TileSize, 16 * TileSize - TileSize), Game1.random.Next(TileSize, 16 * TileSize - TileSize));
+						tries++;
 					}
+					if (tries < 10 || visualOnly)
+					{
+						temporarySprites.Add(new TemporaryAnimatedSprite("LooseSprites\\Cursors", new Rectangle(464, 1792, 16, 16), 120f, 5, 0, player1.position + topLeftScreenCoordinate + new Vector2(TileSize / 2, TileSize / 2), flicker: false, flipped: false, 1f, 0f, Color.White, 3f, 0f, 0f, 0f, local: true));
+						temporarySprites.Add(new TemporaryAnimatedSprite("LooseSprites\\Cursors", new Rectangle(464, 1792, 16, 16), 120f, 5, 0, new Vector2(teleportSpot.X, teleportSpot.Y) + topLeftScreenCoordinate + new Vector2(TileSize / 2, TileSize / 2), flicker: false, flipped: false, 1f, 0f, Color.White, 3f, 0f, 0f, 0f, local: true));
+						temporarySprites.Add(new TemporaryAnimatedSprite("LooseSprites\\Cursors", new Rectangle(464, 1792, 16, 16), 120f, 5, 0, new Vector2(teleportSpot.X - TileSize / 2, teleportSpot.Y) + topLeftScreenCoordinate + new Vector2(TileSize / 2, TileSize / 2), flicker: false, flipped: false, 1f, 0f, Color.White, 3f, 0f, 0f, 0f, local: true)
+						{
+							delayBeforeAnimationStart = 200
+						});
+						temporarySprites.Add(new TemporaryAnimatedSprite("LooseSprites\\Cursors", new Rectangle(464, 1792, 16, 16), 120f, 5, 0, new Vector2(teleportSpot.X + TileSize / 2, teleportSpot.Y) + topLeftScreenCoordinate + new Vector2(TileSize / 2, TileSize / 2), flicker: false, flipped: false, 1f, 0f, Color.White, 3f, 0f, 0f, 0f, local: true)
+						{
+							delayBeforeAnimationStart = 400
+						});
+						temporarySprites.Add(new TemporaryAnimatedSprite("LooseSprites\\Cursors", new Rectangle(464, 1792, 16, 16), 120f, 5, 0, new Vector2(teleportSpot.X, teleportSpot.Y - TileSize / 2) + topLeftScreenCoordinate + new Vector2(TileSize / 2, TileSize / 2), flicker: false, flipped: false, 1f, 0f, Color.White, 3f, 0f, 0f, 0f, local: true)
+						{
+							delayBeforeAnimationStart = 600
+						});
+						temporarySprites.Add(new TemporaryAnimatedSprite("LooseSprites\\Cursors", new Rectangle(464, 1792, 16, 16), 120f, 5, 0, new Vector2(teleportSpot.X, teleportSpot.Y + TileSize / 2) + topLeftScreenCoordinate + new Vector2(TileSize / 2, TileSize / 2), flicker: false, flipped: false, 1f, 0f, Color.White, 3f, 0f, 0f, 0f, local: true)
+						{
+							delayBeforeAnimationStart = 800
+						});
+						player1.position = new Vector2(teleportSpot.X, teleportSpot.Y);
+
+						//NET Player Move
+						NETmovePlayer(player1.position);
+
+						monsterConfusionTimer = 4000;
+						player1.SetInvincible(4000);
+						Game1.playSound("cowboy_powerup");
+					}
+					break;
+
 				case POWERUP_TYPE.LIFE:
 					lives++;
 					Game1.playSound("cowboy_powerup");
 					break;
 				case POWERUP_TYPE.NUKE:
+					Game1.playSound("cowboy_explosion");
+					//Spawn the little explosion things yk yes
+					for (int i = 0; i < 30; i++)
 					{
-						Game1.playSound("cowboy_explosion");
-						if (!shootoutLevel)
+						temporarySprites.Add(new TemporaryAnimatedSprite("LooseSprites\\Cursors", new Rectangle(464, 1792, 16, 16), 80f, 5, 0, new Vector2(Game1.random.Next(1, 16), Game1.random.Next(1, 16)) * TileSize + topLeftScreenCoordinate + new Vector2(TileSize / 2, TileSize / 2), flicker: false, flipped: false, 1f, 0f, Color.White, 3f, 0f, 0f, 0f, local: true)
 						{
-							foreach (Enemy c2 in monsters)
-							{
-								AddGuts(c2.position.Location, c2.type);
-							}
-							monsters.Clear();
-						}
-						else
-						{
-							foreach (Enemy c in monsters)
-							{
-								c.TakeDamage(30);
-								//bullets.Add(new CowboyBullet(this, c.position.Center, 2, 1));
-								NETspawnBullet(true, c.position.Center, 2, 1);
-							}
-						}
-						for (int i = 0; i < 30; i++)
-						{
-							temporarySprites.Add(new TemporaryAnimatedSprite("LooseSprites\\Cursors", new Rectangle(464, 1792, 16, 16), 80f, 5, 0, new Vector2(Game1.random.Next(1, 16), Game1.random.Next(1, 16)) * TileSize + topLeftScreenCoordinate + new Vector2(TileSize / 2, TileSize / 2), flicker: false, flipped: false, 1f, 0f, Color.White, 3f, 0f, 0f, 0f, local: true)
-							{
-								delayBeforeAnimationStart = Game1.random.Next(800)
-							});
-						}
-						break;
+							delayBeforeAnimationStart = Game1.random.Next(800)
+						});
 					}
+					
+
+					if (!shootoutLevel)
+					{
+						foreach (Enemy e in monsters)
+						{
+							AddGuts(e.position.Location, e.type);
+
+							if (visualOnly) continue;
+
+							PK_EnemyKilled mEnemyKilled = new();
+							mEnemyKilled.id = e.id;
+							modInstance.Helper.Multiplayer.SendMessage(mEnemyKilled, "PK_EnemyKilled");
+						}
+
+						if (!visualOnly) monsters.Clear();
+					}
+					else
+					{
+						if (visualOnly) break;
+						foreach (Enemy c in monsters)
+						{
+							c.TakeDamage(30);
+							//bullets.Add(new CowboyBullet(this, c.position.Center, 2, 1));
+							NETspawnBullet(true, c.position.Center, 2, 1);
+						}
+					}
+					break;
+
 				case POWERUP_TYPE.SPREAD:
 				case POWERUP_TYPE.RAPIDFIRE:
 				case POWERUP_TYPE.SHOTGUN:
+					if (visualOnly) break;
 					Game1.playSound("cowboy_gunload");
 					activePowerups.Add(which, powerupDuration + 2000);
 					break;
@@ -777,11 +791,10 @@ namespace MultiPlayerPrairie
 					Game1.playSound("Pickup_Coin15");
 					break;
 				default:
-					{
-						activePowerups.Add(which, powerupDuration);
-						Game1.playSound("cowboy_powerup");
-						break;
-					}
+					if (visualOnly) break;
+					activePowerups.Add(which, powerupDuration);
+					Game1.playSound("cowboy_powerup");
+					break;
 			}
 			if (whichRound > 0 && activePowerups.ContainsKey(which))
 			{
@@ -1133,6 +1146,7 @@ namespace MultiPlayerPrairie
 
 		public bool tick(GameTime time)
 		{
+			Game1.gameTimeInterval = 0;
 			if (_buttonHeldFrames == null)
 			{
 				_buttonHeldFrames = new Dictionary<GameKeys, int>();
@@ -1475,12 +1489,12 @@ namespace MultiPlayerPrairie
 						{
 							merchantShopOpen = true;
 							Game1.playSound("cowboy_monsterhit");
+							map[7, 15] = MAP_TILE.SAND;
 							map[8, 15] = MAP_TILE.SAND;
-							map[7, 15] = MAP_TILE.SAND;
-							map[7, 15] = MAP_TILE.SAND;
+							map[9, 15] = MAP_TILE.SAND;
+							map[7, 14] = MAP_TILE.SAND;
 							map[8, 14] = MAP_TILE.SAND;
-							map[7, 14] = MAP_TILE.SAND;
-							map[7, 14] = MAP_TILE.SAND;
+							map[9, 14] = MAP_TILE.SAND;
 							shoppingCarpetNoPickup = new Rectangle(merchantBox.X - TileSize, merchantBox.Y + TileSize, TileSize * 3, TileSize * 2);
 						}
 					}
@@ -1931,8 +1945,8 @@ namespace MultiPlayerPrairie
 			else if (whichWave > 0)
 			{
 				waitingForPlayerToMoveDownAMap = true;
-				map[8, 15] = MAP_TILE.SAND;
 				map[7, 15] = MAP_TILE.SAND;
+				map[8, 15] = MAP_TILE.SAND;
 				map[9, 15] = MAP_TILE.SAND;
 			}
 		}
@@ -2003,7 +2017,7 @@ namespace MultiPlayerPrairie
 				shootoutLevel = true;
 
 				if(isHost)
-					monsters.Add(new Outlaw(this, new Point(8 * TileSize, 13 * TileSize), (world == 0) ? 50 : 100));
+					monsters.Add(new Outlaw(this, new Point(8 * TileSize, 13 * TileSize)));
 
 				if (Game1.soundBank != null)
 				{
