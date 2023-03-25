@@ -12,29 +12,28 @@ using static MultiPlayerPrairie.GameMultiplayerPrairieKing;
 
 namespace MultiplayerPrairieKing.Entities.Enemies
 {
+	enum DRACULA_PHASE
+    {
+		GLOATING_PHASE = -1,
+		RANDOM_SHOOT = 0,
+		SPREAD_SHOOT = 1,
+		SUMMON_DEMON = 2,
+		SUMMON_MUMMY = 3
+    }
+
 	public class Dracula : Enemy
 	{
-		public const int gloatingPhase = -1;
+		DRACULA_PHASE phase;
 
-		public const int walkRandomlyAndShootPhase = 0;
+		int phaseInternalTimer;
 
-		public const int spreadShotPhase = 1;
+		int phaseInternalCounter;
 
-		public const int summonDemonPhase = 2;
+		int shootTimer;
 
-		public const int summonMummyPhase = 3;
+		readonly int fullHealth;
 
-		public int phase = -1;
-
-		public int phaseInternalTimer;
-
-		public int phaseInternalCounter;
-
-		public int shootTimer;
-
-		public int fullHealth;
-
-		public Point homePosition;
+		Point homePosition;
 
 		public Dracula(GameMultiplayerPrairieKing game)
 			: base(game, MONSTER_TYPE.dracula, new Point(8 * TileSize, 8 * TileSize))
@@ -43,14 +42,14 @@ namespace MultiplayerPrairieKing.Entities.Enemies
 			position.Y += TileSize * 4;
 			health = 350;
 			fullHealth = health;
-			phase = -1;
+			phase = DRACULA_PHASE.GLOATING_PHASE;
 			phaseInternalTimer = 4000;
 			speed = 2;
 		}
 
 		public override void Draw(SpriteBatch b)
 		{
-			if (phase != -1)
+			if (phase != DRACULA_PHASE.GLOATING_PHASE)
 			{
 				b.Draw(Game1.staminaRect, new Rectangle((int)topLeftScreenCoordinate.X, (int)topLeftScreenCoordinate.Y + 16 * TileSize + 3, (int)((float)(16 * TileSize) * ((float)health / (float)fullHealth)), TileSize / 3), new Color(188, 51, 74));
 			}
@@ -59,11 +58,11 @@ namespace MultiplayerPrairieKing.Entities.Enemies
 				b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(position.X, position.Y), new Rectangle(464, 1696, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, (float)position.Y / 10000f);
 				return;
 			}
-			int num = phase;
+			int num = (int)phase;
 			if (num == -1 || (uint)(num - 1) <= 2u)
 			{
 				b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(position.X, position.Y), new Rectangle(592 + phaseInternalTimer / 100 % 3 * 16, 1760, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, (float)position.Y / 10000f);
-				if (phase == -1)
+				if (phase == DRACULA_PHASE.GLOATING_PHASE)
 				{
 					b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(position.X, (float)(position.Y + TileSize) + (float)Math.Sin((float)phaseInternalTimer / 1000f) * 3f), new Rectangle(528, 1776, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, (float)position.Y / 10000f);
 					b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(position.X - TileSize / 2, position.Y - TileSize * 2), new Rectangle(608, 1728, 32, 32), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, (float)position.Y / 10000f);
@@ -132,7 +131,7 @@ namespace MultiplayerPrairieKing.Entities.Enemies
 
 		public override bool TakeDamage(int damage)
 		{
-			if (phase == -1)
+			if (phase == DRACULA_PHASE.GLOATING_PHASE)
 			{
 				return false;
 			}
@@ -155,7 +154,7 @@ namespace MultiplayerPrairieKing.Entities.Enemies
 			phaseInternalTimer -= time.ElapsedGameTime.Milliseconds;
 			switch (phase)
 			{
-				case -1:
+				case DRACULA_PHASE.GLOATING_PHASE:
 					if (phaseInternalTimer <= 0)
 					{
 						phaseInternalCounter = 0;
@@ -167,7 +166,7 @@ namespace MultiplayerPrairieKing.Entities.Enemies
 						phase = 0;
 					}
 					break;
-				case 0:
+				case DRACULA_PHASE.RANDOM_SHOOT:
 					{
 						if (phaseInternalCounter == 0)
 						{
@@ -177,7 +176,7 @@ namespace MultiplayerPrairieKing.Entities.Enemies
 						if (phaseInternalTimer < 0)
 						{
 							phaseInternalCounter = 0;
-							phase = Game1.random.Next(1, 4);
+							phase = (DRACULA_PHASE)Game1.random.Next(1, 4);
 							phaseInternalTimer = 9999;
 						}
 						Vector2 target = playerPosition;
@@ -186,38 +185,38 @@ namespace MultiplayerPrairieKing.Entities.Enemies
 							break;
 						}
 						int movementDirection = -1;
-						if (Math.Abs(target.X - (float)position.X) > Math.Abs(target.Y - (float)position.Y))
+						if (Math.Abs(target.X - position.X) > Math.Abs(target.Y - position.Y))
 						{
-							if (target.X + (float)speed < (float)position.X)
+							if (target.X + speed < position.X)
 							{
 								movementDirection = 3;
 							}
-							else if (target.X > (float)(position.X + speed))
+							else if (target.X > (position.X + speed))
 							{
 								movementDirection = 1;
 							}
-							else if (target.Y > (float)(position.Y + speed))
+							else if (target.Y > (position.Y + speed))
 							{
 								movementDirection = 2;
 							}
-							else if (target.Y + (float)speed < (float)position.Y)
+							else if (target.Y + speed < position.Y)
 							{
 								movementDirection = 0;
 							}
 						}
-						else if (target.Y > (float)(position.Y + speed))
+						else if (target.Y > (position.Y + speed))
 						{
 							movementDirection = 2;
 						}
-						else if (target.Y + (float)speed < (float)position.Y)
+						else if (target.Y + speed < position.Y)
 						{
 							movementDirection = 0;
 						}
-						else if (target.X + (float)speed < (float)position.X)
+						else if (target.X + speed < position.X)
 						{
 							movementDirection = 3;
 						}
-						else if (target.X > (float)(position.X + speed))
+						else if (target.X > (position.X + speed))
 						{
 							movementDirection = 1;
 						}
@@ -251,16 +250,14 @@ namespace MultiplayerPrairieKing.Entities.Enemies
 							{
 								trajectory = Utility.getTranslatedVector2(trajectory, gameInstance.player1.movementDirections.Last(), 3f);
 							}
-
-							//gameInstance.enemyBullets.Add(new CowboyBullet(gameInstance, new Point(position.X + TileSize / 2, position.Y + TileSize / 2), new Point((int)trajectory.X, (int)trajectory.Y), 1));
 							if (gameInstance.isHost) gameInstance.NETspawnBullet(false, new Point(position.X + TileSize / 2, position.Y + TileSize / 2), new Point((int)trajectory.X, (int)trajectory.Y), 1);
 							shootTimer = 250;
 							Game1.playSound("Cowboy_gunshot");
 						}
 						break;
 					}
-				case 2:
-				case 3:
+				case DRACULA_PHASE.SUMMON_DEMON:
+				case DRACULA_PHASE.SUMMON_MUMMY:
 					if (phaseInternalCounter == 0)
 					{
 						Point oldPosition = position.Location;
@@ -300,7 +297,7 @@ namespace MultiplayerPrairieKing.Entities.Enemies
 						}
 					}
 					break;
-				case 1:
+				case DRACULA_PHASE.SPREAD_SHOOT:
 					if (phaseInternalCounter == 0)
 					{
 						Point oldPosition2 = position.Location;
@@ -411,7 +408,6 @@ namespace MultiplayerPrairieKing.Entities.Enemies
 					trajectory.Y = (float)(Math.Sin(offsetAngle) * (p.X - origin.X) + Math.Cos(offsetAngle) * (p.Y - origin.Y) + origin.Y);
 					trajectory = Utility.getVelocityTowardPoint(origin, trajectory, 8f);
 				}
-				//gameInstance.enemyBullets.Add(new CowboyBullet(gameInstance, origin, new Point((int)trajectory.X, (int)trajectory.Y), 1));
 				if (gameInstance.isHost) gameInstance.NETspawnBullet(false, origin, new Point((int)trajectory.X, (int)trajectory.Y), 1);
 			}
 			Game1.playSound("Cowboy_gunshot");

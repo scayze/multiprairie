@@ -13,7 +13,7 @@ namespace MultiplayerPrairieKing.Entities
 {
 	public class Enemy
 	{
-		public GameMultiplayerPrairieKing gameInstance;
+		protected GameMultiplayerPrairieKing gameInstance;
 
 		public long id;
 
@@ -23,23 +23,23 @@ namespace MultiplayerPrairieKing.Entities
 
 		public MONSTER_TYPE type;
 
-		public int speed;
+		protected int speed;
 
-		public float movementAnimationTimer;
+		float movementAnimationTimer;
 
 		public Rectangle position;
 
-		public int movementDirection;
+		int movementDirection;
 
-		public bool movedLastTurn;
+		bool movedLastTurn;
 
-		public bool oppositeMotionGuy;
+		bool oppositeMotionGuy;
 
 		public bool invisible;
 
-		public bool special;
+		bool special;
 
-		public bool uninterested;
+		bool uninterested;
 
 		public bool flyer;
 
@@ -54,17 +54,6 @@ namespace MultiplayerPrairieKing.Entities
 		public Vector2 acceleration;
 
 		private Point targetPosition;
-
-
-		/*public CowboyMonster(GameMultiplayerPrairieKing game, int which, int health, int speed, Point position)
-		{
-			this.gameInstance = game;
-			this.health = health;
-			type = which;
-			this.speed = speed;
-			this.position = new Rectangle(position.X, position.Y, TileSize, TileSize);
-			uninterested = (Game1.random.NextDouble() < 0.25);
-		}*/
 
 		public Enemy(GameMultiplayerPrairieKing game, MONSTER_TYPE which, Point position)
 		{
@@ -400,11 +389,13 @@ namespace MultiplayerPrairieKing.Entities
 						}
 						if (type == MONSTER_TYPE.spikey && !invisible)
 						{
-							gameInstance.temporarySprites.Add(new TemporaryAnimatedSprite("LooseSprites\\Cursors", new Rectangle(352, 1728, 16, 16), 60f, 3, 0, new Vector2(position.X, position.Y) + topLeftScreenCoordinate, flicker: false, flipped: false, (float)position.Y / 10000f, 0f, Color.White, 3f, 0f, 0f, 0f, local: true)
-							{
-								endFunction = SpikeyEndBehavior
-							});
-							invisible = true;
+							if(gameInstance.isHost)
+                            {
+								SpikeyStartTransform();
+								PK_SpikeyTransform message = new PK_SpikeyTransform();
+								message.id = id;
+								gameInstance.modInstance.Helper.Multiplayer.SendMessage(message, "PK_SpikeyTransform");
+							}
 						}
 						break;
 					}
@@ -458,11 +449,18 @@ namespace MultiplayerPrairieKing.Entities
 			return false;
 		}
 
-		public void SpikeyEndBehavior(int extraInfo)
-		{
-			invisible = false;
-			health += 5;
-			special = true;
+		public void SpikeyStartTransform()
+        {
+			gameInstance.temporarySprites.Add(new TemporaryAnimatedSprite("LooseSprites\\Cursors", new Rectangle(352, 1728, 16, 16), 60f, 3, 0, new Vector2(position.X, position.Y) + topLeftScreenCoordinate, flicker: false, flipped: false, (float)position.Y / 10000f, 0f, Color.White, 3f, 0f, 0f, 0f, local: true)
+			{
+				endFunction = (int specialParam) =>
+				{
+					invisible = false;
+					health += 5;
+					special = true;
+				}
+			});
+			invisible = true;
 		}
 
 		public virtual void OnDeath()

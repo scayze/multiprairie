@@ -10,19 +10,19 @@ namespace MultiplayerPrairieKing.Entities
 	{
 		public long id;
 
-		public GameMultiplayerPrairieKing gameInstance;
+		readonly GameMultiplayerPrairieKing gameInstance;
 
-		public Point position;
+		Point position;
 
 		public Point motion;
 
-		public int damage;
+		int damage;
 
 		public bool queuedForDeletion = false;
 
-		public bool isFriendly;
+		readonly bool isFriendly;
 
-		public bool isPersonal;
+		readonly bool isPersonal;
 
 
 		public Bullet(GameMultiplayerPrairieKing gameInstance, bool isFriendly, bool isPersonal, Point position, Point motion, int damage)

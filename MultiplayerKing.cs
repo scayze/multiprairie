@@ -368,14 +368,23 @@ namespace MultiPlayerPrairie
                         }
                         else
                         {
-                            this.Monitor.Log("Entities position wasnt updated: " + m.id, LogLevel.Debug);
+                            Monitor.Log("Entities position wasnt updated: " + m.id, LogLevel.Debug);
                             PK_game.monsters.RemoveAt(i);
                         }
                     }
                     break;
 
                 case "PK_SpikeyTransform":
+                    PK_SpikeyTransform mSpikeyTransform = e.ReadAs<PK_SpikeyTransform>();
 
+                    //manuallay transform the spikey. Kinda hacky but donT CARE
+                    for (int i = PK_game.monsters.Count - 1; i >= 0; i--)
+                    {
+                        if (PK_game.monsters[i].id == mSpikeyTransform.id)
+                        {
+                            PK_game.monsters[i].SpikeyStartTransform();
+                        }
+                    }
                     break;
 
                 case "PK_CompleteLevel":

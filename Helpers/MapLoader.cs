@@ -148,7 +148,7 @@ namespace MultiplayerPrairieKing.Helpers
 							{
 								if (newMap[x, y] ==  MAP_TILE.CACTUS)
 								{
-									newMap[x, y] = (MAP_TILE)((!(Game1.random.NextDouble() < 0.5)) ? 1 : 0);
+									newMap[x, y] = (MAP_TILE)((Game1.random.NextDouble() >= 0.5) ? 1 : 0);
 								}
 							}
 						}

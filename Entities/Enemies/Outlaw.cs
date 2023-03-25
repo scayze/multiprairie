@@ -8,35 +8,33 @@ using static MultiPlayerPrairie.GameMultiplayerPrairieKing;
 
 namespace MultiplayerPrairieKing.Entities.Enemies
 {
+	enum OUTLAW_PHASE
+	{
+		TALKING = -1,
+		HIDING = 0,
+		DARTOUTANDSHOOT = 1,
+		RUNANDGUN = 2,
+		RUNGUNANDPANT = 3,
+		SHOOTING = 4
+	}
 	public class Outlaw : Enemy
 	{
-		public const int talkingPhase = -1;
 
-		public const int hidingPhase = 0;
+		OUTLAW_PHASE phase;
 
-		public const int dartOutAndShootPhase = 1;
+		int phaseCountdown;
 
-		public const int runAndGunPhase = 2;
+		int shootTimer;
 
-		public const int runGunAndPantPhase = 3;
+		int phaseInternalTimer;
 
-		public const int shootAtPlayerPhase = 4;
+		int phaseInternalCounter;
 
-		public int phase;
+		bool dartLeft;
 
-		public int phaseCountdown;
+		readonly int fullHealth;
 
-		public int shootTimer;
-
-		public int phaseInternalTimer;
-
-		public int phaseInternalCounter;
-
-		public bool dartLeft;
-
-		public int fullHealth;
-
-		public Point homePosition;
+		Point homePosition;
 
 		public Outlaw(GameMultiplayerPrairieKing game, Point position)
 			: base(game, MONSTER_TYPE.outlaw, position)
@@ -44,22 +42,22 @@ namespace MultiplayerPrairieKing.Entities.Enemies
 			homePosition = position;
 			fullHealth = health;
 			phaseCountdown = 4000;
-			phase = -1;
+			phase = OUTLAW_PHASE.TALKING;
 		}
 
 		public override void Draw(SpriteBatch b)
 		{
-			b.Draw(Game1.staminaRect, new Rectangle((int)topLeftScreenCoordinate.X, (int)topLeftScreenCoordinate.Y + 16 * TileSize + 3, (int)((float)(16 * TileSize) * ((float)health / (float)fullHealth)), TileSize / 3), new Color(188, 51, 74));
+			b.Draw(Game1.staminaRect, new Rectangle((int)topLeftScreenCoordinate.X, (int)topLeftScreenCoordinate.Y + 16 * TileSize + 3, (int)((16 * TileSize) * (health / fullHealth)), TileSize / 3), new Color(188, 51, 74));
 			if (flashColorTimer > 0f)
 			{
-				b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(position.X, position.Y), new Rectangle(496, 1696, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, (float)position.Y / 10000f + 0.001f);
+				b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(position.X, position.Y), new Rectangle(496, 1696, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, position.Y / 10000f + 0.001f);
 				return;
 			}
-			int num = phase;
+			int num = (int)phase;
 			if ((uint)(num - -1) <= 1u)
 			{
-				b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(position.X, position.Y), new Rectangle(560 + ((phaseCountdown / 250 % 2 == 0) ? 16 : 0), 1776, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, (float)position.Y / 10000f + 0.001f);
-				if (phase == -1 && phaseCountdown > 1000)
+				b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(position.X, position.Y), new Rectangle(560 + ((phaseCountdown / 250 % 2 == 0) ? 16 : 0), 1776, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, position.Y / 10000f + 0.001f);
+				if (phase == OUTLAW_PHASE.TALKING && phaseCountdown > 1000)
 				{
 					b.Draw(
 						Game1.mouseCursors,
@@ -70,17 +68,17 @@ namespace MultiplayerPrairieKing.Entities.Enemies
 						Vector2.Zero,
 						3f,
 						SpriteEffects.None,
-						(float)position.Y / 10000f + 0.001f
+						position.Y / 10000f + 0.001f
 					);
 				}
 			}
-			else if (phase == 3 && phaseInternalCounter == 2)
+			else if (phase == OUTLAW_PHASE.RUNGUNANDPANT && phaseInternalCounter == 2)
 			{
-				b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(position.X, position.Y), new Rectangle(560 + ((phaseCountdown / 250 % 2 == 0) ? 16 : 0), 1776, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, (float)position.Y / 10000f + 0.001f);
+				b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(position.X, position.Y), new Rectangle(560 + ((phaseCountdown / 250 % 2 == 0) ? 16 : 0), 1776, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, position.Y / 10000f + 0.001f);
 			}
 			else
 			{
-				b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(position.X, position.Y), new Rectangle(592 + ((phaseCountdown / 80 % 2 == 0) ? 16 : 0), 1776, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, (float)position.Y / 10000f + 0.001f);
+				b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(position.X, position.Y), new Rectangle(592 + ((phaseCountdown / 80 % 2 == 0) ? 16 : 0), 1776, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, position.Y / 10000f + 0.001f);
 			}
 		}
 
@@ -97,32 +95,32 @@ namespace MultiplayerPrairieKing.Entities.Enemies
 			}
 			switch (phase)
 			{
-				case -1:
-				case 0:
+				case OUTLAW_PHASE.TALKING:
+				case OUTLAW_PHASE.HIDING:
 					if (phaseCountdown >= 0)
 					{
 						break;
 					}
-					phase = Game1.random.Next(1, 5);
+					phase = (OUTLAW_PHASE)Game1.random.Next(1, 5);
 					dartLeft = (playerPosition.X < (float)position.X);
 					if (playerPosition.X > (float)(7 * TileSize) && playerPosition.X < (float)(9 * TileSize))
 					{
-						if (Game1.random.NextDouble() < 0.66 || phase == 2)
+						if (Game1.random.NextDouble() < 0.66 || phase == OUTLAW_PHASE.RUNANDGUN)
 						{
-							phase = 4;
+							phase = OUTLAW_PHASE.SHOOTING;
 						}
 					}
-					else if (phase == 4)
+					else if (phase == OUTLAW_PHASE.SHOOTING)
 					{
-						phase = 3;
+						phase = OUTLAW_PHASE.RUNGUNANDPANT;
 					}
 					phaseInternalCounter = 0;
 					phaseInternalTimer = 0;
 					break;
-				case 4:
+				case OUTLAW_PHASE.SHOOTING:
 					{
 						int motion4 = dartLeft ? (-3) : 3;
-						if (phaseInternalCounter == 0 && (!(playerPosition.X > (float)(7 * TileSize)) || !(playerPosition.X < (float)(9 * TileSize))))
+						if (phaseInternalCounter == 0 && (playerPosition.X <= (7 * TileSize) || playerPosition.X >= (9 * TileSize)))
 						{
 							phaseInternalCounter = 1;
 							phaseInternalTimer = Game1.random.Next(500, 1500);
@@ -155,7 +153,6 @@ namespace MultiplayerPrairieKing.Entities.Enemies
 						if (shootTimer < 0)
 						{
 							Vector2 trajectory = Utility.getVelocityTowardPoint(new Point(position.X + TileSize / 2, position.Y), playerPosition + new Vector2(TileSize / 2, TileSize / 2), 8f);
-							//gameInstance.enemyBullets.Add(new CowboyBullet(gameInstance, new Point(position.X + TileSize / 2, position.Y - TileSize / 2), new Point((int)trajectory.X, (int)trajectory.Y), 1));
 							if (gameInstance.isHost) gameInstance.NETspawnBullet(false, new Point(position.X + TileSize / 2, position.Y - TileSize / 2), new Point((int)trajectory.X, (int)trajectory.Y), 1);
 							shootTimer = 120;
 							Game1.playSound("Cowboy_gunshot");
@@ -166,7 +163,7 @@ namespace MultiplayerPrairieKing.Entities.Enemies
 						}
 						break;
 					}
-				case 1:
+				case OUTLAW_PHASE.DARTOUTANDSHOOT:
 					{
 						int motion4 = dartLeft ? (-3) : 3;
 						if (Math.Abs(position.Location.X - homePosition.X + TileSize / 2) < TileSize * 2 + 12 && phaseInternalCounter == 0)
@@ -198,7 +195,6 @@ namespace MultiplayerPrairieKing.Entities.Enemies
 						shootTimer -= time.ElapsedGameTime.Milliseconds;
 						if (shootTimer < 0)
 						{
-							//gameInstance.enemyBullets.Add(new CowboyBullet(gameInstance, new Point(position.X + TileSize / 2, position.Y - TileSize / 2), new Point(Game1.random.Next(-2, 3), -8), 1));
 							if (gameInstance.isHost) gameInstance.NETspawnBullet(false, new Point(position.X + TileSize / 2, position.Y - TileSize / 2), new Point(Game1.random.Next(-2, 3), -8), 1);
 							shootTimer = 150;
 							Game1.playSound("Cowboy_gunshot");
@@ -209,7 +205,7 @@ namespace MultiplayerPrairieKing.Entities.Enemies
 						}
 						break;
 					}
-				case 2:
+				case OUTLAW_PHASE.RUNANDGUN:
 					if (phaseInternalCounter == 2)
 					{
 						if (position.X < homePosition.X)
@@ -245,7 +241,6 @@ namespace MultiplayerPrairieKing.Entities.Enemies
 					shootTimer -= time.ElapsedGameTime.Milliseconds;
 					if (shootTimer < 0)
 					{
-						//gameInstance.enemyBullets.Add(new CowboyBullet(gameInstance, new Point(position.X + TileSize / 2, position.Y - TileSize / 2), new Point(Game1.random.Next(-1, 2), -8), 1));
 						if (gameInstance.isHost) gameInstance.NETspawnBullet(false, new Point(position.X + TileSize / 2, position.Y - TileSize / 2), new Point(Game1.random.Next(-1, 2), -8), 1);
 						shootTimer = 250;
 						if (fullHealth > 50)
@@ -263,7 +258,7 @@ namespace MultiplayerPrairieKing.Entities.Enemies
 						phaseInternalCounter++;
 					}
 					break;
-				case 3:
+				case OUTLAW_PHASE.RUNGUNANDPANT:
 					{
 						if (phaseInternalCounter == 0)
 						{
@@ -307,7 +302,6 @@ namespace MultiplayerPrairieKing.Entities.Enemies
 						shootTimer -= time.ElapsedGameTime.Milliseconds;
 						if (shootTimer < 0)
 						{
-							//gameInstance.enemyBullets.Add(new CowboyBullet(gameInstance, new Point(position.X + TileSize / 2, position.Y - TileSize / 2), new Point(Game1.random.Next(-1, 2), -8), 1));
 							if (gameInstance.isHost) gameInstance.NETspawnBullet(false, new Point(position.X + TileSize / 2, position.Y - TileSize / 2), new Point(Game1.random.Next(-1, 2), -8), 1);
 							shootTimer = 250;
 							if (fullHealth > 50)
@@ -323,7 +317,7 @@ namespace MultiplayerPrairieKing.Entities.Enemies
 						phaseInternalTimer -= time.ElapsedGameTime.Milliseconds;
 						if (phaseInternalTimer <= 0)
 						{
-							if (phase == 2)
+							if (phase == OUTLAW_PHASE.RUNANDGUN)
 							{
 								phaseInternalCounter = 3;
 								break;
@@ -333,11 +327,6 @@ namespace MultiplayerPrairieKing.Entities.Enemies
 						}
 						break;
 					}
-			}
-			if (position.X <= 16 * TileSize)
-			{
-				_ = position.X;
-				_ = 0;
 			}
 			return false;
 		}

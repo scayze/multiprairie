@@ -69,9 +69,9 @@ namespace MultiPlayerPrairie
 			//NET Spawn Bullet
 			PK_BulletSpawn mBullet = new();
 			mBullet.id = bullet.id;
-			mBullet.position = bullet.position;
-			mBullet.motion = bullet.motion;
-			mBullet.damage = bullet.damage;
+			mBullet.position = position;
+			mBullet.motion = motion;
+			mBullet.damage = damage;
 			mBullet.isFriendly = friendly;
 			modInstance.Helper.Multiplayer.SendMessage(mBullet, "PK_BulletSpawn");
 		}
@@ -84,9 +84,9 @@ namespace MultiPlayerPrairie
 			//NET Spawn Bullet
 			PK_BulletSpawn mBullet = new();
 			mBullet.id = bullet.id;
-			mBullet.position = bullet.position;
+			mBullet.position = position;
 			mBullet.motion = bullet.motion;
-			mBullet.damage = bullet.damage;
+			mBullet.damage = damage;
 			mBullet.isFriendly = friendly;
 			modInstance.Helper.Multiplayer.SendMessage(mBullet, "PK_BulletSpawn");
 		}
