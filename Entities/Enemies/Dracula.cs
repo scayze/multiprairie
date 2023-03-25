@@ -88,7 +88,7 @@ namespace MultiplayerPrairieKing.Entities.Enemies
 			//Spawn heart on defeat
 			if (gameInstance.isHost)
 			{
-                gameInstance.powerups.Add(new Powerup(gameInstance, POWERUP_TYPE.HEART, new Point(8 * TileSize, 10 * TileSize), 9999999));
+				gameInstance.NETspawnPowerup(POWERUP_TYPE.HEART, new Point(8 * TileSize, 10 * TileSize), 9999999);
 			}
 
 			//???
@@ -181,7 +181,7 @@ namespace MultiplayerPrairieKing.Entities.Enemies
 							phaseInternalTimer = 9999;
 						}
 						Vector2 target = playerPosition;
-						if (!(gameInstance.player1.deathTimer <= 0f))
+						if (gameInstance.player1.deathTimer > 0f)
 						{
 							break;
 						}
@@ -253,7 +253,7 @@ namespace MultiplayerPrairieKing.Entities.Enemies
 							}
 
 							//gameInstance.enemyBullets.Add(new CowboyBullet(gameInstance, new Point(position.X + TileSize / 2, position.Y + TileSize / 2), new Point((int)trajectory.X, (int)trajectory.Y), 1));
-							gameInstance.NETspawnBullet(false, new Point(position.X + TileSize / 2, position.Y + TileSize / 2), new Point((int)trajectory.X, (int)trajectory.Y), 1);
+							if (gameInstance.isHost) gameInstance.NETspawnBullet(false, new Point(position.X + TileSize / 2, position.Y + TileSize / 2), new Point((int)trajectory.X, (int)trajectory.Y), 1);
 							shootTimer = 250;
 							Game1.playSound("Cowboy_gunshot");
 						}
@@ -358,8 +358,7 @@ namespace MultiplayerPrairieKing.Entities.Enemies
 							shootTimer = 200;
 							phaseInternalCounter++;
 							Vector2 trajectory3 = Utility.getVelocityTowardPoint(new Point(position.X + TileSize / 2, position.Y), playerPosition + new Vector2(TileSize / 2, TileSize / 2), 8f);
-							//gameInstance.enemyBullets.Add(new CowboyBullet(gameInstance, new Point(position.X + TileSize / 2, position.Y + TileSize / 2), new Point((int)trajectory3.X, (int)trajectory3.Y), 1));
-							gameInstance.NETspawnBullet(false, new Point(position.X + TileSize / 2, position.Y + TileSize / 2), new Point((int)trajectory3.X, (int)trajectory3.Y), 1);
+							if (gameInstance.isHost) gameInstance.NETspawnBullet(false, new Point(position.X + TileSize / 2, position.Y + TileSize / 2), new Point((int)trajectory3.X, (int)trajectory3.Y), 1);
 							Game1.playSound("Cowboy_gunshot");
 						}
 					}
@@ -375,8 +374,7 @@ namespace MultiplayerPrairieKing.Entities.Enemies
 							Vector2 trajectory2 = Utility.getVelocityTowardPoint(new Point(position.X + TileSize / 2, position.Y), playerPosition + new Vector2(TileSize / 2, TileSize / 2), 8f);
 							trajectory2.X += Game1.random.Next(-1, 2);
 							trajectory2.Y += Game1.random.Next(-1, 2);
-							//gameInstance.enemyBullets.Add(new CowboyBullet(gameInstance, new Point(position.X + TileSize / 2, position.Y + TileSize / 2), new Point((int)trajectory2.X, (int)trajectory2.Y), 1));
-							gameInstance.NETspawnBullet(false, new Point(position.X + TileSize / 2, position.Y + TileSize / 2), new Point((int)trajectory2.X, (int)trajectory2.Y), 1);
+							if (gameInstance.isHost) gameInstance.NETspawnBullet(false, new Point(position.X + TileSize / 2, position.Y + TileSize / 2), new Point((int)trajectory2.X, (int)trajectory2.Y), 1);
 							Game1.playSound("Cowboy_gunshot");
 							shootTimer = 200;
 						}
@@ -409,12 +407,12 @@ namespace MultiplayerPrairieKing.Entities.Enemies
 				if (offsetAngle > 0.0)
 				{
 					offsetAngle /= 2.0;
-					trajectory.X = (float)(Math.Cos(offsetAngle) * (double)(p.X - (float)origin.X) - Math.Sin(offsetAngle) * (double)(p.Y - (float)origin.Y) + (double)origin.X);
-					trajectory.Y = (float)(Math.Sin(offsetAngle) * (double)(p.X - (float)origin.X) + Math.Cos(offsetAngle) * (double)(p.Y - (float)origin.Y) + (double)origin.Y);
+					trajectory.X = (float)(Math.Cos(offsetAngle) * (p.X - origin.X) - Math.Sin(offsetAngle) * (p.Y - origin.Y) + origin.X);
+					trajectory.Y = (float)(Math.Sin(offsetAngle) * (p.X - origin.X) + Math.Cos(offsetAngle) * (p.Y - origin.Y) + origin.Y);
 					trajectory = Utility.getVelocityTowardPoint(origin, trajectory, 8f);
 				}
 				//gameInstance.enemyBullets.Add(new CowboyBullet(gameInstance, origin, new Point((int)trajectory.X, (int)trajectory.Y), 1));
-				gameInstance.NETspawnBullet(false, origin, new Point((int)trajectory.X, (int)trajectory.Y), 1);
+				if (gameInstance.isHost) gameInstance.NETspawnBullet(false, origin, new Point((int)trajectory.X, (int)trajectory.Y), 1);
 			}
 			Game1.playSound("Cowboy_gunshot");
 		}

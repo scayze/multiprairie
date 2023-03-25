@@ -18,11 +18,11 @@ namespace MultiplayerPrairieKing.Entities
 		public List<int> movementDirections = new();
 		public List<int> shootingDirections = new();
 
-		public int playerMotionAnimationTimer;
+		public int motionAnimationTimer;
 		public float deathTimer;
 
-		protected float playerFootstepSoundTimer = 200f;
-		protected int playerInvincibleTimer;
+		protected float footstepSoundTimer = 200f;
+		protected int invincibleTimer;
 
 		protected int holdItemTimer;
 		protected ITEM_TYPE itemToHold = ITEM_TYPE.NONE;
@@ -73,19 +73,19 @@ namespace MultiplayerPrairieKing.Entities
 
 		public void SetInvincible(int duration)
 		{
-			playerInvincibleTimer = duration;
+			invincibleTimer = duration;
 		}
 
 		public bool IsInvincible()
 		{
-			return playerInvincibleTimer > 0;
+			return invincibleTimer > 0;
 		}
 
 		public virtual void Tick(GameTime time)
         {
-			if (playerInvincibleTimer > 0)
+			if (invincibleTimer > 0)
 			{
-				playerInvincibleTimer -= time.ElapsedGameTime.Milliseconds;
+				invincibleTimer -= time.ElapsedGameTime.Milliseconds;
 			}
 			if (deathTimer > 0)
 			{
@@ -98,11 +98,11 @@ namespace MultiplayerPrairieKing.Entities
 
 			if (movementDirections.Count > 0)
 			{
-				playerFootstepSoundTimer -= time.ElapsedGameTime.Milliseconds;
-				if (playerFootstepSoundTimer <= 0)
+				footstepSoundTimer -= time.ElapsedGameTime.Milliseconds;
+				if (footstepSoundTimer <= 0)
 				{
 					Game1.playSound("Cowboy_Footstep");
-					playerFootstepSoundTimer = 200;
+					footstepSoundTimer = 200;
 				}
 			}
 		}

@@ -2,11 +2,6 @@
 using Microsoft.Xna.Framework.Graphics;
 using MultiPlayerPrairie;
 using StardewValley;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using static MultiPlayerPrairie.GameMultiplayerPrairieKing;
 
 namespace MultiplayerPrairieKing.Entities
@@ -27,19 +22,22 @@ namespace MultiplayerPrairieKing.Entities
 
 		public bool isFriendly;
 
+		public bool isPersonal;
 
-		public Bullet(GameMultiplayerPrairieKing game, bool isFriendly, Point position, Point motion, int damage)
+
+		public Bullet(GameMultiplayerPrairieKing gameInstance, bool isFriendly, bool isPersonal, Point position, Point motion, int damage)
 		{
-			this.gameInstance = game;
+			this.gameInstance = gameInstance;
 			this.id = gameInstance.modInstance.Helper.Multiplayer.GetNewID();
 
 			this.position = position;
 			this.motion = motion;
 			this.damage = damage;
 			this.isFriendly = isFriendly;
+			this.isPersonal = isPersonal;
 		}
 
-		public Bullet(GameMultiplayerPrairieKing game, bool isFriendly, Point position, int direction, int damage)
+		public Bullet(GameMultiplayerPrairieKing game, bool isFriendly, bool isPersonal, Point position, int direction, int damage)
 		{
 			this.gameInstance = game;
 			this.id = gameInstance.modInstance.Helper.Multiplayer.GetNewID();
@@ -62,6 +60,7 @@ namespace MultiplayerPrairieKing.Entities
 			}
 			this.damage = damage;
 			this.isFriendly = isFriendly;
+			this.isPersonal = isPersonal;
 		}
 
 		public void Draw(SpriteBatch b)
@@ -91,6 +90,8 @@ namespace MultiplayerPrairieKing.Entities
 
 		public void FriendlyUpdate()
         {
+			if (!isPersonal) return;
+
 			for (int k = gameInstance.monsters.Count - 1; k >= 0; k--)
 			{
 				Enemy monster = gameInstance.monsters[k];
@@ -113,11 +114,7 @@ namespace MultiplayerPrairieKing.Entities
 						}
 						if (loot != POWERUP_TYPE.LOG && gameInstance.whichWave != 12)
 						{
-							if (gameInstance.isHost)
-							{
-								gameInstance.powerups.Add(new Powerup(gameInstance, loot, monster.position.Location, gameInstance.lootDuration));
-							}
-
+							gameInstance.NETspawnPowerup(loot, monster.position.Location, gameInstance.lootDuration);
 						}
 
 						//NET EnemyKilled
@@ -139,7 +136,8 @@ namespace MultiplayerPrairieKing.Entities
 						//NET Despawn Bullet
 						PK_BulletDespawned mBulletDespawned = new();
 						mBulletDespawned.id = id;
-						mBulletDespawned.isFriendly = true;
+						mBulletDespawned.monsterId = monster.id;
+						mBulletDespawned.damage = monsterhealth - monsterAfterDamageHealth;
 						gameInstance.modInstance.Helper.Multiplayer.SendMessage(mBulletDespawned, "PK_BulletDespawned");
 
 						queuedForDeletion = true;

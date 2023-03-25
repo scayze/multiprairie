@@ -5,8 +5,6 @@ using StardewModdingAPI;
 using StardewModdingAPI.Events;
 using StardewModdingAPI.Utilities;
 using StardewValley;
-using System.Linq;
-using StardewValley.Objects;
 using HarmonyLib;
 using MultiplayerPrairieKing.Entities;
 using MultiplayerPrairieKing.Entities.Enemies;
@@ -260,13 +258,10 @@ namespace MultiPlayerPrairie
                 case "PK_PowerupSpawn":
                     PK_PowerupSpawn mPowerupSpawn = e.ReadAs<PK_PowerupSpawn>();
                     POWERUP_TYPE powerupType = (POWERUP_TYPE)mPowerupSpawn.which;
-                    //public CowboyPowerup(GameMultiplayerPrairieKing game, int which, Point position, int duration)
-                    if (!PK_game.isHost)
-                    {
-                        Powerup powerup = new(PK_game, powerupType, mPowerupSpawn.position, mPowerupSpawn.duration);
-                        powerup.id = mPowerupSpawn.id;
-                        PK_game.powerups.Add(powerup);
-                    }
+
+                    Powerup powerupSpawn = new(PK_game, powerupType, mPowerupSpawn.position, mPowerupSpawn.duration);
+                    powerupSpawn.id = mPowerupSpawn.id;
+                    PK_game.powerups.Add(powerupSpawn);
                     break;
 
                 case "PK_PowerupPickup":
@@ -293,10 +288,10 @@ namespace MultiPlayerPrairie
                     PK_game.player2.movementDirections = mPlayerMove.movementDirections;
                     PK_game.player2.shootingDirections = mPlayerMove.shootingDirections;
                     PK_game.player2.position = mPlayerMove.position;
-                    PK_game.player2.boundingBox.X = (int)PK_game.player2.position.X + GameMultiplayerPrairieKing.TileSize / 4;
-                    PK_game.player2.boundingBox.Y = (int)PK_game.player2.position.Y + GameMultiplayerPrairieKing.TileSize / 4;
-                    PK_game.player2.boundingBox.Width = GameMultiplayerPrairieKing.TileSize / 2;
-                    PK_game.player2.boundingBox.Height = GameMultiplayerPrairieKing.TileSize / 2;
+                    PK_game.player2.boundingBox.X = (int)PK_game.player2.position.X + TileSize / 4;
+                    PK_game.player2.boundingBox.Y = (int)PK_game.player2.position.Y + TileSize / 4;
+                    PK_game.player2.boundingBox.Width = TileSize / 2;
+                    PK_game.player2.boundingBox.Height = TileSize / 2;
 
                     break;
 
@@ -307,7 +302,7 @@ namespace MultiPlayerPrairie
 
                 case "PK_BulletSpawn":
                     PK_BulletSpawn mBulletSpawn = e.ReadAs<PK_BulletSpawn>();
-                    Bullet bullet = new(PK_game, mBulletSpawn.isFriendly, mBulletSpawn.position, mBulletSpawn.motion, mBulletSpawn.damage);
+                    Bullet bullet = new(PK_game, mBulletSpawn.isFriendly, false, mBulletSpawn.position, mBulletSpawn.motion, mBulletSpawn.damage);
                     bullet.id = mBulletSpawn.id;
                     PK_game.bullets.Add(bullet);
                     break;
@@ -315,7 +310,7 @@ namespace MultiPlayerPrairie
                 case "PK_BulletDespawned":
                     PK_BulletDespawned mBulletDespawned = e.ReadAs<PK_BulletDespawned>();
 
-                    //Remove the killed monster
+                    //Remove the despawned bullet
                     for (int i = PK_game.bullets.Count - 1; i >= 0; i--)
                     {
                         if (PK_game.bullets[i].id == mBulletDespawned.id)
@@ -323,6 +318,18 @@ namespace MultiPlayerPrairie
                             PK_game.bullets.RemoveAt(i);
                         }
                     }
+
+                    if (mBulletDespawned.monsterId == -69) break;
+
+                    //Damage the enemy the bullet despawned on
+                    for (int i = PK_game.monsters.Count - 1; i >= 0; i--)
+                    {
+                        if (PK_game.monsters[i].id == mBulletDespawned.monsterId)
+                        {
+                            PK_game.monsters[i].TakeDamage(mBulletDespawned.damage);
+                        }
+                    }
+
                     break;
 
                 case "PK_EnemySpawn":
@@ -457,7 +464,9 @@ namespace MultiPlayerPrairie
     public class PK_BulletDespawned
     {
         public long id = -69;
-        public bool isFriendly = true;
+
+        public long monsterId = -69;
+        public int damage;
     }
 
 

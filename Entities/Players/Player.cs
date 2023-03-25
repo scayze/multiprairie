@@ -14,10 +14,10 @@ namespace MultiplayerPrairieKing.Entities
 		public int runSpeedLevel;
 		public int fireSpeedLevel;
 		public int ammoLevel;
+		public int bulletDamage = 1;
 
 		int shotTimer;
-		public int bulletDamage;
-		public int shootingDelay = 300;
+		readonly int shootingDelay = 300;
 		
 		
 		public Player(GameMultiplayerPrairieKing game) : base(game)
@@ -200,9 +200,6 @@ namespace MultiplayerPrairieKing.Entities
 						if (!gameInstance.IsCollidingWithMap(newPlayerBox) && (!gameInstance.merchantBox.Intersects(newPlayerBox) || gameInstance.merchantBox.Intersects(boundingBox)))
 						{
 							position = newPlayerPosition;
-
-							//NET Player Move
-							gameInstance.NETmovePlayer(position);
 						}
 					}
 				}
@@ -214,8 +211,8 @@ namespace MultiplayerPrairieKing.Entities
 				boundingBox.Height = TileSize / 2;
 
 				//????
-				playerMotionAnimationTimer += time.ElapsedGameTime.Milliseconds;
-				playerMotionAnimationTimer %= 400;
+				motionAnimationTimer += time.ElapsedGameTime.Milliseconds;
+				motionAnimationTimer %= 400;
 
 				//Pick up powerups
 				for (int i = gameInstance.powerups.Count - 1; i >= 0; i--)
@@ -256,11 +253,14 @@ namespace MultiplayerPrairieKing.Entities
 				}
 			}
 
+			//NET Player Move
+			gameInstance.NETmovePlayer(position);
+
 		}
 
 		public override void Draw(SpriteBatch b)
         {
-			if (deathTimer <= 0f && (playerInvincibleTimer <= 0 || playerInvincibleTimer / 100 % 2 == 0))
+			if (deathTimer <= 0f && (invincibleTimer <= 0 || invincibleTimer / 100 % 2 == 0))
 			{
 				if (holdItemTimer > 0)
 				{
@@ -278,7 +278,7 @@ namespace MultiplayerPrairieKing.Entities
 				else
 				{
 					int facingDirection = (shootingDirections.Count == 0) ? movementDirections.ElementAt(0) : shootingDirections.Last();
-					b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + position + new Vector2(0f, -TileSize / 4) + new Vector2(4f, 13f) * 3f, new Rectangle(483, 1760 + playerMotionAnimationTimer / 100 * 3, 10, 3), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, position.Y / 10000f + 0.001f + 0.001f);
+					b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + position + new Vector2(0f, -TileSize / 4) + new Vector2(4f, 13f) * 3f, new Rectangle(483, 1760 + motionAnimationTimer / 100 * 3, 10, 3), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, position.Y / 10000f + 0.001f + 0.001f);
 					b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + position + new Vector2(3f, -TileSize / 4), new Rectangle(464 + facingDirection * 16, 1744, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, position.Y / 10000f + 0.002f + 0.001f);
 				}
 			}

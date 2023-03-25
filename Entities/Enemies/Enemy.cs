@@ -246,14 +246,6 @@ namespace MultiplayerPrairieKing.Entities
 			{
 				return false;
 			}
-			if (gameInstance.shopping)
-			{
-				gameInstance.shoppingTimer -= time.ElapsedGameTime.Milliseconds;
-				if (gameInstance.shoppingTimer <= 0)
-				{
-					gameInstance.shoppingTimer = 100;
-				}
-			}
 			ticksSinceLastMovement++;
 			switch (type)
 			{
@@ -293,7 +285,7 @@ namespace MultiplayerPrairieKing.Entities
 						}
 
 						Vector2 target2 = (!targetPosition.Equals(Point.Zero)) ? new Vector2(targetPosition.X, targetPosition.Y) : playerPosition;
-						if (gameInstance.playingWithAbigail && target2.Equals(playerPosition))
+						if (target2.Equals(playerPosition))
 						{
 							double distanceToPlayer = Math.Sqrt(Math.Pow(position.X - target2.X, 2.0) - Math.Pow(position.Y - target2.Y, 2.0));
 							if (Math.Sqrt(Math.Pow(position.X - gameInstance.player2.position.X, 2.0) - Math.Pow(position.Y - gameInstance.player2.position.Y, 2.0)) < distanceToPlayer)
@@ -385,7 +377,7 @@ namespace MultiplayerPrairieKing.Entities
 								}
 							}
 						}
-						if (gameInstance.IsCollidingWithMapForMonsters(attemptedPosition) || gameInstance.IsCollidingWithMonster(attemptedPosition, this) || !(gameInstance.player1.deathTimer <= 0f))
+						if (gameInstance.IsCollidingWithMapForMonsters(attemptedPosition) || gameInstance.IsCollidingWithMonster(attemptedPosition, this) || gameInstance.player1.deathTimer > 0f)
 						{
 							break;
 						}
