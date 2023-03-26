@@ -111,7 +111,7 @@ namespace MultiplayerPrairieKing.Entities
 			{
 				shotTimer -= time.ElapsedGameTime.Milliseconds;
 			}
-			if (deathTimer <= 0f && shootingDirections.Count > 0 && shotTimer <= 0)
+			if (deathTimer <= 0f && shootingDirections.Count > 0 && shotTimer <= 0 && !IsHoldingItem())
 			{
 				if (gameInstance.activePowerups.ContainsKey(POWERUP_TYPE.SPREAD))
 				{
@@ -153,7 +153,7 @@ namespace MultiplayerPrairieKing.Entities
 			}
 
 			//Movement
-			if (deathTimer <= 0f && movementDirections.Count > 0 && !gameInstance.scrollingMap)
+			if (deathTimer <= 0f && movementDirections.Count > 0 && !gameInstance.scrollingMap && gameInstance.zombieModeTimer < 8200)
 			{
 				int effectiveDirections = movementDirections.Count;
 				if (effectiveDirections >= 2 && movementDirections.Last() == (movementDirections.ElementAt(movementDirections.Count - 2) + 2) % 4)

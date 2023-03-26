@@ -6,6 +6,7 @@ using MultiplayerPrairieKing;
 using MultiplayerPrairieKing.Entities;
 using MultiplayerPrairieKing.Entities.Enemies;
 using MultiplayerPrairieKing.Helpers;
+using StardewModdingAPI;
 using StardewValley;
 using StardewValley.Minigames;
 using System;
@@ -112,7 +113,9 @@ namespace MultiPlayerPrairie
 			mPowerup.which = (int)type;
 			mPowerup.duration = duration;
 			modInstance.Helper.Multiplayer.SendMessage(mPowerup, "PK_PowerupSpawn");
-        }
+
+			modInstance.Monitor.Log("spawning " + mPowerup.which.ToString() + " with id " + mPowerup.id, LogLevel.Debug);
+		}
 
 		public ModMultiPlayerPrairieKing modInstance;
 
@@ -146,6 +149,10 @@ namespace MultiPlayerPrairie
 
 		public const int deathDelay = 3000;
 
+		public static Texture2D shopBubbleTexture;
+
+		public DIFFICULTY difficulty = DIFFICULTY.NORMAL;
+
 		public enum MONSTER_TYPE
 		{
 			orc = 0,
@@ -158,6 +165,13 @@ namespace MultiPlayerPrairie
 			dracula = -2,
 			outlaw = -1
 		}
+
+		public enum DIFFICULTY
+        {
+			EASY = 0,
+			NORMAL = 1,
+			HARD = 2
+        }
 
 		public enum MAP_TYPE {
 			desert = 0,
@@ -239,7 +253,7 @@ namespace MultiPlayerPrairie
 
 		public MAP_TILE[,] map = new MAP_TILE[16, 16];
 
-		public MAP_TILE[,] nextMap = new MAP_TILE[16, 16];
+		MAP_TILE[,] nextMap = new MAP_TILE[16, 16];
 
 		public class SpawnTask
         {
@@ -369,8 +383,10 @@ namespace MultiPlayerPrairie
 		{
 			if (Game1.player.jotpkProgress.Value == null)
 			{
+				modInstance.Monitor.Log("couldnt find savefile lol");
 				return false;
 			}
+			modInstance.Monitor.Log("FOUND SAVEFILE WEJO");
 			AbigailGame.JOTPKProgress save_data = Game1.player.jotpkProgress.Value;
 			player1.ammoLevel = save_data.ammoLevel.Value;
 			player1.runSpeedLevel = save_data.runSpeedLevel.Value;
@@ -439,28 +455,98 @@ namespace MultiPlayerPrairie
 			{
 				map = MapLoader.GetMap(whichWave);
 			}
-		}
 
-		public GameMultiplayerPrairieKing(ModMultiPlayerPrairieKing mod, bool isHost, int coins, int ammoLevel, int bulletDamage, int fireSpeedLevel, int runSpeedLevel, int lives, bool spreadPistol, int whichRound)
-		{
-			this.modInstance = mod;
-			this.isHost = isHost;
-			Reset();
-			this.Coins = coins;
-			player1.ammoLevel = ammoLevel;
-			player1.bulletDamage = bulletDamage;
-			player1.fireSpeedLevel = fireSpeedLevel;
-			player1.runSpeedLevel = runSpeedLevel;
-			this.lives = lives;
-			this.spreadPistol = spreadPistol;
-			this.newGamePlus = whichRound;
-			ApplyNewGamePlus();
-			SaveGame();
-			onStartMenu = false;
+			if (modInstance.Config.Difficulty == "Easy") difficulty = DIFFICULTY.EASY;
+			else if (modInstance.Config.Difficulty == "Normal") difficulty = DIFFICULTY.NORMAL;
+			else if (modInstance.Config.Difficulty == "Hard") difficulty = DIFFICULTY.HARD;
 		}
 
 		public void ApplyNewGamePlus()
 		{
+			topLeftScreenCoordinate = new Vector2(Game1.viewport.Width / 2 - 384, Game1.viewport.Height / 2 - 384);
+			merchantArriving = false;
+			merchantShopOpen = false;
+			monsterConfusionTimer = 0;
+			monsters.Clear();
+			newMapPosition = 16 * TileSize;
+			scrollingMap = false;
+			shopping = false;
+			temporarySprites.Clear();
+			waitingForPlayerToMoveDownAMap = false;
+			waveTimer = 80000;
+			whichWave = 0;
+			zombieModeTimer = 0;
+			shootoutLevel = false;
+			betweenWaveTimer = 5000;
+			gopherRunning = false;
+			hasGopherAppeared = false;
+			outlawSong = null;
+			overworldSong = null;
+			endCutscene = false;
+			endCutscenePhase = 0;
+			endCutsceneTimer = 0;
+			gameOver = false;
+			onStartMenu = true;
+			startTimer = 0;
+			powerups.Clear();
+			world = 0;
+			Game1.changeMusicTrack("none", track_interruptable: false, Game1.MusicContext.MiniGame);
+			for (int x = 0; x < 16; x++)
+			{
+				for (int y = 0; y < 16; y++)
+				{
+					if ((x == 0 || x == 15 || y == 0 || y == 15) && (x <= 6 || x >= 10) && (y <= 6 || y >= 10))
+					{
+						map[x, y] = MAP_TILE.CACTUS;
+					}
+					else if (x == 0 || x == 15 || y == 0 || y == 15)
+					{
+						map[x, y] = (MAP_TILE)((Game1.random.NextDouble() < 0.15) ? 1 : 0);
+					}
+					else if (x == 1 || x == 14 || y == 1 || y == 14)
+					{
+						map[x, y] = MAP_TILE.GRAVEL;
+					}
+					else
+					{
+						map[x, y] = (MAP_TILE)((Game1.random.NextDouble() < 0.1) ? 4 : 3);
+					}
+				}
+			}
+
+			if(isHost)
+            {
+				player1.position = new Vector2(384f, 384f);
+				player2.position = new Vector2(432f, 384f);
+			}
+			else
+            {
+				player2.position = new Vector2(384f, 384f);
+				player1.position = new Vector2(432f, 384f);
+			}
+				
+			//NET Player Move
+			NETmovePlayer(player1.position);
+
+			player1.boundingBox.X = (int)player1.position.X + TileSize / 4;
+			player1.boundingBox.Y = (int)player1.position.Y + TileSize / 4;
+			player1.boundingBox.Width = TileSize / 2;
+			player1.boundingBox.Height = TileSize / 2;
+
+			//If playing with abigail
+			onStartMenu = false; //TODO show anyway?
+			
+			betweenWaveTimer += 1500;
+
+			for (int j = 0; j < 4; j++)
+			{
+				spawnQueue[j] = new List<SpawnTask>();
+			}
+			noPickUpBox = new Rectangle(0, 0, TileSize, TileSize);
+			merchantBox = new Rectangle(8 * TileSize, 0, TileSize, TileSize);
+			newMapPosition = 16 * TileSize;
+
+			//Actual apply new game plus
 			monsterChances[0] = new Vector2(0.014f + newGamePlus * 0.005f, 0.41f + newGamePlus * 0.05f);
 			monsterChances[4] = new Vector2(0.002f, 0.1f);
 		}
@@ -623,8 +709,9 @@ namespace MultiPlayerPrairie
 			switch (which)
 			{
 				case POWERUP_TYPE.HEART:
-					if (visualOnly) break;
 					player1.HoldItem(ITEM_TYPE.FINISHED_GAME, 4000);
+					player2.HoldItem(ITEM_TYPE.FINISHED_GAME, 4000);
+					
 					Game1.playSound("Cowboy_Secret");
 					endCutscene = true;
 					endCutsceneTimer = 4000;
@@ -950,6 +1037,7 @@ namespace MultiPlayerPrairie
 			gamerestartTimer = 2000;
 			Game1.playSound("Cowboy_monsterDie");
 			newGamePlus++;
+			//ApplyNewGamePlus();
 		}
 
 		public void StartLevelTransition()
@@ -1193,14 +1281,14 @@ namespace MultiPlayerPrairie
 				gamerestartTimer -= time.ElapsedGameTime.Milliseconds;
 				if (gamerestartTimer <= 0)
 				{
-					unload();
 					if (newGamePlus == 0 || !endCutscene)
 					{
+						unload();
 						Game1.currentMinigame = new GameMultiplayerPrairieKing(modInstance, isHost);
 					}
 					else
 					{
-						Game1.currentMinigame = new GameMultiplayerPrairieKing(modInstance, isHost, Coins, player1.ammoLevel, player1.bulletDamage, player1.fireSpeedLevel, player1.runSpeedLevel, lives, spreadPistol, newGamePlus);
+						ApplyNewGamePlus();
 					}
 				}
 			}
@@ -1217,8 +1305,12 @@ namespace MultiPlayerPrairie
 					switch (endCutscenePhase)
 					{
 						case 1:
-							Game1.getSteamAchievement("Achievement_PrairieKing");
-							if (!died)
+							if(modInstance.Config.AchievementPrairieKingEnabled)
+                            {
+								Game1.getSteamAchievement("Achievement_PrairieKing");
+							}
+								
+							if (!died && modInstance.Config.AchievementFectorsChallengeEnabled)
 							{
 								Game1.getSteamAchievement("Achievement_FectorsChallenge");
 							}
@@ -1254,7 +1346,13 @@ namespace MultiPlayerPrairie
 							}
 							if (gamerestartTimer <= 0)
 							{
-								StartNewRound();
+								if(isHost)
+                                {
+									StartNewRound();
+									PK_StartNewGamePlus message = new();
+									modInstance.Helper.Multiplayer.SendMessage(message, "PK_StartNewGamePlus");
+								}
+								
 							}
 							break;
 					}
@@ -1501,7 +1599,7 @@ namespace MultiPlayerPrairie
 								merchantArriving = false;
 								merchantShopOpen = false;
 
-								PK_BuyItem message = new PK_BuyItem();
+								PK_BuyItem message = new();
 								message.type = (int)boughtItem;
 								modInstance.Helper.Multiplayer.SendMessage(message, "PK_BuyItem");
 
@@ -1605,7 +1703,7 @@ namespace MultiPlayerPrairie
 							hasGopherAppeared = true;
 							gopherBox = new Rectangle(Game1.random.Next(16 * TileSize), Game1.random.Next(16 * TileSize), TileSize, TileSize);
 							int tries2 = 0;
-							while ((IsCollidingWithMap(gopherBox) || IsCollidingWithMonster(gopherBox, null) || Math.Abs((float)gopherBox.X - player1.position.X) < (float)(TileSize * 6) || Math.Abs((float)gopherBox.Y - player1.position.Y) < (float)(TileSize * 6) || Math.Abs(gopherBox.X - 8 * TileSize) < TileSize * 4 || Math.Abs(gopherBox.Y - 8 * TileSize) < TileSize * 4) && tries2 < 10)
+							while ((IsCollidingWithMap(gopherBox) || IsCollidingWithMonster(gopherBox, null) || Math.Abs(gopherBox.X - player1.position.X) < (TileSize * 6) || Math.Abs(gopherBox.Y - player1.position.Y) < (float)(TileSize * 6) || Math.Abs(gopherBox.X - 8 * TileSize) < TileSize * 4 || Math.Abs(gopherBox.Y - 8 * TileSize) < TileSize * 4) && tries2 < 10)
 							{
 								gopherBox.X = Game1.random.Next(16 * TileSize);
 								gopherBox.Y = Game1.random.Next(16 * TileSize);
@@ -1641,10 +1739,6 @@ namespace MultiPlayerPrairie
 								if(isHost)
 									monsters.Add(new Enemy(this,spawnQueue[p][0].type, new Point((int)tile.X * TileSize, (int)tile.Y * TileSize)));
 
-								if (newGamePlus > 0)
-								{
-									monsters.Last().health += newGamePlus * 2;
-								}
 								spawnQueue[p][0] = new SpawnTask(spawnQueue[p][0].type, spawnQueue[p][0].Y - 1);
 								if (spawnQueue[p][0].Y <= 0)
 								{
@@ -1664,10 +1758,6 @@ namespace MultiPlayerPrairie
 											if (isHost)
 												monsters.Add(new Enemy(this,spawnQueue[p].First().type, new Point(x * TileSize, 0)));
 
-											if (newGamePlus > 0)
-											{
-												monsters.Last().health += newGamePlus * 2;
-											}
 											spawnQueue[p][0] = new SpawnTask(spawnQueue[p][0].type, spawnQueue[p][0].Y - 1);
 											if (spawnQueue[p][0].Y <= 0)
 											{
@@ -1687,10 +1777,6 @@ namespace MultiPlayerPrairie
 											if (isHost)
 												monsters.Add(new Enemy(this,spawnQueue[p].First().type, new Point(15 * TileSize, y * TileSize)));
 
-											if (newGamePlus > 0)
-											{
-												monsters.Last().health += newGamePlus * 2;
-											}
 											spawnQueue[p][0] = new SpawnTask(spawnQueue[p][0].type, spawnQueue[p][0].Y - 1);
 											if (spawnQueue[p][0].Y <= 0)
 											{
@@ -1710,10 +1796,6 @@ namespace MultiPlayerPrairie
 											if (isHost)
 												monsters.Add(new Enemy(this,spawnQueue[p].First().type, new Point(x2 * TileSize, 15 * TileSize)));
 
-											if (newGamePlus > 0)
-											{
-												monsters.Last().health += newGamePlus * 2;
-											}
 											spawnQueue[p][0] = new SpawnTask(spawnQueue[p][0].type, spawnQueue[p][0].Y - 1);
 											if (spawnQueue[p][0].Y <= 0)
 											{
@@ -1733,10 +1815,6 @@ namespace MultiPlayerPrairie
 											if (isHost)
 												monsters.Add(new Enemy(this,spawnQueue[p].First().type, new Point(0, y2 * TileSize)));
 
-											if (newGamePlus > 0)
-											{
-												monsters.Last().health += newGamePlus * 2;
-											}
 											spawnQueue[p][0] = new SpawnTask(spawnQueue[p][0].type, spawnQueue[p][0].Y - 1);
 											if (spawnQueue[p][0].Y <= 0)
 											{
@@ -1998,10 +2076,6 @@ namespace MultiPlayerPrairie
 				if(isHost)
 					monsters.Add(new Dracula(this));
 
-				if (newGamePlus > 0)
-				{
-					monsters.Last().health *= 2;
-				}
 			}
 			else if (whichWave > 0 && whichWave % 4 == 0)
 			{
@@ -2397,13 +2471,24 @@ namespace MultiPlayerPrairie
 			}
 			else
 			{
+				//Lightning animation for zombie powerup
 				if (zombieModeTimer > 8200)
 				{
+					//Draw the flashing characters
 					b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + player1.position, new Rectangle(384 + ((zombieModeTimer / 200 % 2 == 0) ? 16 : 0), 1760, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 1f);
-					for (int y = (int)(player1.position.Y - (float)TileSize); y > -TileSize; y -= TileSize)
+					b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + player2.position, new Rectangle(384 + ((zombieModeTimer / 200 % 2 == 0) ? 16 : 0), 1760, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 1f);
+
+					//Draw the lighning above the players
+					for (int y = (int)(player1.position.Y - TileSize); y > -TileSize; y -= TileSize)
 					{
 						b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(player1.position.X, y), new Rectangle(368 + ((y / TileSize % 3 == 0) ? 16 : 0), 1744, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 1f);
 					}
+
+					for (int y = (int)(player2.position.Y - TileSize); y > -TileSize; y -= TileSize)
+					{
+						b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(player2.position.X, y), new Rectangle(368 + ((y / TileSize % 3 == 0) ? 16 : 0), 1744, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 1f);
+					}
+
 					b.End();
 					return;
 				}
@@ -2448,7 +2533,7 @@ namespace MultiPlayerPrairie
 				//Draw shop
 				if (shopping)
 				{
-					if ((merchantArriving) && !merchantShopOpen)
+					if (merchantArriving && !merchantShopOpen)
 					{
 						b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(merchantBox.Location.X, merchantBox.Location.Y), new Rectangle(464 + ((shoppingTimer / 100 % 2 == 0) ? 16 : 0), 1728, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, (float)merchantBox.Y / 10000f + 0.001f);
 					}
@@ -2466,6 +2551,19 @@ namespace MultiPlayerPrairie
 							b.DrawString(Game1.smallFont, string.Concat(GetPriceForItem(v.Value)), topLeftScreenCoordinate + new Vector2((v.Key.Location.X + TileSize / 2) - Game1.smallFont.MeasureString(string.Concat(GetPriceForItem(v.Value))).X / 2f - 1f, v.Key.Location.Y + TileSize + 3), new Color(88, 29, 43), 0f, Vector2.Zero, 1f, SpriteEffects.None, v.Key.Location.Y / 10000f + 0.002f);
 							b.DrawString(Game1.smallFont, string.Concat(GetPriceForItem(v.Value)), topLeftScreenCoordinate + new Vector2((v.Key.Location.X + TileSize / 2) - Game1.smallFont.MeasureString(string.Concat(GetPriceForItem(v.Value))).X / 2f + 1f, v.Key.Location.Y + TileSize + 3), new Color(88, 29, 43), 0f, Vector2.Zero, 1f, SpriteEffects.None, v.Key.Location.Y / 10000f + 0.002f);
 						}
+
+						//Draw Speech bubble
+						b.Draw(
+							shopBubbleTexture,
+							topLeftScreenCoordinate + new Vector2(merchantBox.Location.X - TileSize / 2, merchantBox.Location.Y - TileSize * 2),
+							new Rectangle(0, 0, 32, 32),
+							Color.White,
+							0f,
+							Vector2.Zero,
+							3f,
+							SpriteEffects.None,
+							merchantBox.Location.Y / 10000f + 0.001f
+						);
 					}
 				}
 

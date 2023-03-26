@@ -104,6 +104,14 @@ namespace MultiplayerPrairieKing.Entities
 						monsterAfterDamageHealth = monster.health;
 						gameInstance.AddGuts(monster.position.Location, monster.type);
 
+						//NET EnemyKilled
+						PK_EnemyKilled mEnemyKilled = new();
+						mEnemyKilled.id = monster.id;
+						gameInstance.modInstance.Helper.Multiplayer.SendMessage(mEnemyKilled, "PK_EnemyKilled");
+						Game1.playSound("Cowboy_monsterDie");
+
+						gameInstance.modInstance.Monitor.Log("Monser killed by bullet: " + monster.id, StardewModdingAPI.LogLevel.Debug);
+
 						gameInstance.monsters.RemoveAt(k);
 					}
 					else

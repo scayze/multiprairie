@@ -47,7 +47,7 @@ namespace MultiplayerPrairieKing.Entities.Enemies
 
 		public override void Draw(SpriteBatch b)
 		{
-			b.Draw(Game1.staminaRect, new Rectangle((int)topLeftScreenCoordinate.X, (int)topLeftScreenCoordinate.Y + 16 * TileSize + 3, ((16 * TileSize) * (health / fullHealth)), TileSize / 3), new Color(188, 51, 74));
+			b.Draw(Game1.staminaRect, new Rectangle((int)topLeftScreenCoordinate.X, (int)topLeftScreenCoordinate.Y + 16 * TileSize + 3, ((16 * TileSize) * (int)((float)health / (float)fullHealth)), TileSize / 3), new Color(188, 51, 74));
 			if (flashColorTimer > 0f)
 			{
 				b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(position.X, position.Y), new Rectangle(496, 1696, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, position.Y / 10000f + 0.001f);

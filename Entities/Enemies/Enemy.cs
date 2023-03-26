@@ -119,7 +119,20 @@ namespace MultiplayerPrairieKing.Entities
 			}
 			oppositeMotionGuy = (Game1.random.NextDouble() < 0.5);
 
+			if (gameInstance.newGamePlus > 0)
+			{
+				health += gameInstance.newGamePlus * 2;
+			}
 
+			if(gameInstance.difficulty == DIFFICULTY.NORMAL)
+            {
+				health = (int)Math.Ceiling((float)health*1.5);
+			}
+			else if(gameInstance.difficulty == DIFFICULTY.HARD)
+            {
+				health = (int)Math.Ceiling((float)health * 2);
+			}
+			
 			//NET spawn outlaw
 			if (gameInstance.isHost)
 			{
@@ -129,7 +142,6 @@ namespace MultiplayerPrairieKing.Entities
 				message.id = id;
 				message.which = (int)which;
 				message.position = position;
-				message.health = health;
 				game.modInstance.Helper.Multiplayer.SendMessage(message, "PK_EnemySpawn");
 			}
 		}
@@ -183,7 +195,6 @@ namespace MultiplayerPrairieKing.Entities
 
 		public virtual POWERUP_TYPE GetLootDrop()
 		{
-			POWERUP_TYPE lootdrop = POWERUP_TYPE.LOG;
 			//Half chances to drop something second playthrough
 			if (gameInstance.newGamePlus == 1 && Game1.random.NextDouble() < 0.5)
 			{
@@ -199,7 +210,7 @@ namespace MultiplayerPrairieKing.Entities
 			//Chances
 			if (Game1.random.NextDouble() < 0.05)
 			{
-				if (type != 0 && Game1.random.NextDouble() < 0.1)
+				if (type != MONSTER_TYPE.orc && Game1.random.NextDouble() < 0.1)
 				{
 					return POWERUP_TYPE.NICKEL;
 				}
@@ -415,7 +426,7 @@ namespace MultiplayerPrairieKing.Entities
 							if(gameInstance.isHost)
                             {
 								SpikeyStartTransform();
-								PK_SpikeyTransform message = new PK_SpikeyTransform();
+								PK_SpikeyTransform message = new();
 								message.id = id;
 								gameInstance.modInstance.Helper.Multiplayer.SendMessage(message, "PK_SpikeyTransform");
 							}
@@ -488,19 +499,17 @@ namespace MultiplayerPrairieKing.Entities
 
 		public virtual void OnDeath()
 		{
-			//Spawn Pickup if host
-			POWERUP_TYPE loot = GetLootDrop();
+			if(gameInstance.isHost)
+            {
+				//Spawn Pickup if host
+				POWERUP_TYPE loot = GetLootDrop();
 
-			if (loot != POWERUP_TYPE.LOG && gameInstance.whichWave != 12 && gameInstance.isHost)
-			{
-				gameInstance.NETspawnPowerup(loot, position.Location, gameInstance.lootDuration);
+				if (loot != POWERUP_TYPE.LOG && gameInstance.whichWave != 12)
+				{
+					gameInstance.NETspawnPowerup(loot, position.Location, gameInstance.lootDuration);
+				}
 			}
 
-			//NET EnemyKilled
-			PK_EnemyKilled mEnemyKilled = new();
-			mEnemyKilled.id = id;
-			gameInstance.modInstance.Helper.Multiplayer.SendMessage(mEnemyKilled, "PK_EnemyKilled");
-			Game1.playSound("Cowboy_monsterDie");
 		}
 	}
 }

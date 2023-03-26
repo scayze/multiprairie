@@ -11,6 +11,7 @@ using MultiplayerPrairieKing.Entities.Enemies;
 using static MultiPlayerPrairie.GameMultiplayerPrairieKing;
 using Microsoft.Xna.Framework.Graphics;
 using Character = MultiplayerPrairieKing.Entities.Character;
+using MultiplayerPrairieKing;
 
 namespace MultiPlayerPrairie
 {
@@ -18,7 +19,7 @@ namespace MultiPlayerPrairie
     /// <summary>The mod entry point.</summary>
     public class ModMultiPlayerPrairieKing : Mod
     {
-
+        public ModConfig Config;
 
         public class GameLocationPatches
         {
@@ -105,9 +106,11 @@ namespace MultiPlayerPrairie
         public override void Entry(IModHelper helper)
         {
             instance = this;
+            Config = Helper.ReadConfig<ModConfig>();
 
             //Load custom texture for players
-            Character.texture = helper.Content.Load<Texture2D>("assets/poppetjes.png"); 
+            Character.texture = helper.ModContent.Load<Texture2D>("assets/poppetjes.png");
+            GameMultiplayerPrairieKing.shopBubbleTexture = helper.ModContent.Load<Texture2D>("assets/shopBubble.png");
 
             //Register to events
             helper.Events.GameLoop.UpdateTicking += this.OnUpdateTick;
@@ -124,7 +127,16 @@ namespace MultiPlayerPrairie
 
             //Console commands
             helper.ConsoleCommands.Add("pk_SetStage", "Sets the new stage of prairie king.", this.SkipToStage);
-            helper.ConsoleCommands.Add("pk_SetCoints", "Sets the amount of coins the player has in prairie king.", this.SetCoins);
+            helper.ConsoleCommands.Add("pk_SetCoins", "Sets the amount of coins the player has in prairie king.", this.SetCoins);
+            helper.ConsoleCommands.Add("pk_GoCrazy", "We ballin.", this.GoCrazy);
+        }
+
+        private void GoCrazy(string command, string[] args)
+        {
+            GameMultiplayerPrairieKing PK_game = (GameMultiplayerPrairieKing)Game1.currentMinigame;
+            PK_game.player1.SetInvincible(int.MaxValue);
+            PK_game.UsePowerup(POWERUP_TYPE.SHERRIFF);
+            PK_game.activePowerups[0] = int.MaxValue;
         }
 
         private void SetCoins(string command, string[] args)
@@ -252,7 +264,7 @@ namespace MultiPlayerPrairie
             //Debug Log the Message
             if (!(e.Type == "PK_PlayerMove" || e.Type == "PK_EnemyPositions"))
             {
-                this.Monitor.Log(e.Type + " event sent by " + e.FromPlayerID + " to " + Game1.player.UniqueMultiplayerID, LogLevel.Debug);
+                //this.Monitor.Log(e.Type + " event sent by " + e.FromPlayerID + " to " + Game1.player.UniqueMultiplayerID, LogLevel.Debug);
             }
             
 
@@ -269,6 +281,8 @@ namespace MultiPlayerPrairie
                     Powerup powerupSpawn = new(PK_game, powerupType, mPowerupSpawn.position, mPowerupSpawn.duration);
                     powerupSpawn.id = mPowerupSpawn.id;
                     PK_game.powerups.Add(powerupSpawn);
+
+                    Monitor.Log(e.Type + " event, spawning " + powerupType.ToString() + " with id " +powerupSpawn.id, LogLevel.Debug);
                     break;
 
                 case "PK_PowerupPickup":
@@ -408,6 +422,10 @@ namespace MultiPlayerPrairie
                     PK_game.StartLevelTransition();
                     break;
 
+                case "PK_StartNewGamePlus":
+                    PK_game.StartNewRound();
+                    break;
+
                 case "PK_EnemyKilled":
                     PK_EnemyKilled mEnemyKilled = e.ReadAs<PK_EnemyKilled>();
 
@@ -418,10 +436,11 @@ namespace MultiPlayerPrairie
                         if (m.id == mEnemyKilled.id)
                         {
                             m.OnDeath();
-
                             PK_game.monsters.RemoveAt(i);
                             PK_game.AddGuts(m.position.Location, m.type);
                             Game1.playSound("Cowboy_monsterDie");
+
+                            Monitor.Log("Monser killed by event: " + m.id, LogLevel.Debug);
                         }
                     }
                     break;
@@ -504,8 +523,6 @@ namespace MultiPlayerPrairie
         public Point position = Point.Zero;
         public long id = -69;
         public int which = 0;
-        public int health = 1;
-
     }
 
     public class PK_EnemyKilled
@@ -536,8 +553,12 @@ namespace MultiPlayerPrairie
 
     }
 
-
     public class PK_StartLevelTransition
+    {
+
+    }
+
+    public class PK_StartNewGamePlus
     {
 
     }
