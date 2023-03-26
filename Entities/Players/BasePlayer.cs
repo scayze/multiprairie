@@ -8,7 +8,7 @@ using static MultiPlayerPrairie.GameMultiplayerPrairieKing;
 
 namespace MultiplayerPrairieKing.Entities
 {
-    public class Character
+    public class BasePlayer
     {
 		protected GameMultiplayerPrairieKing gameInstance;
 
@@ -30,7 +30,7 @@ namespace MultiplayerPrairieKing.Entities
 		public static Texture2D texture;
 		protected Vector2 textureBase;
 
-		public Character(GameMultiplayerPrairieKing game)
+		public BasePlayer(GameMultiplayerPrairieKing game)
 		{
 			this.gameInstance = game;
 		}

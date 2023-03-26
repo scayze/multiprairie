@@ -6,7 +6,7 @@ using static MultiPlayerPrairie.GameMultiplayerPrairieKing;
 
 namespace MultiplayerPrairieKing.Entities
 {
-    public class PlayerSlave : Character
+    public class PlayerSlave : BasePlayer
     {
         public PlayerSlave(GameMultiplayerPrairieKing game) : base(game)
         {

@@ -10,7 +10,7 @@ using static MultiPlayerPrairie.GameMultiplayerPrairieKing;
 
 namespace MultiplayerPrairieKing.Entities
 {
-	public class Player : Character
+	public class Player : BasePlayer
 	{
 		public int runSpeedLevel;
 		public int fireSpeedLevel;

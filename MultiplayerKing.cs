@@ -10,7 +10,7 @@ using MultiplayerPrairieKing.Entities;
 using MultiplayerPrairieKing.Entities.Enemies;
 using static MultiPlayerPrairie.GameMultiplayerPrairieKing;
 using Microsoft.Xna.Framework.Graphics;
-using Character = MultiplayerPrairieKing.Entities.Character;
+using BasePlayer = MultiplayerPrairieKing.Entities.BasePlayer;
 using MultiplayerPrairieKing;
 
 namespace MultiPlayerPrairie
@@ -109,7 +109,7 @@ namespace MultiPlayerPrairie
             Config = Helper.ReadConfig<ModConfig>();
 
             //Load custom texture for players
-            Character.texture = helper.ModContent.Load<Texture2D>("assets/poppetjes.png");
+            BasePlayer.texture = helper.ModContent.Load<Texture2D>("assets/poppetjes.png");
             GameMultiplayerPrairieKing.shopBubbleTexture = helper.ModContent.Load<Texture2D>("assets/shopBubble.png");
 
             //Register to events

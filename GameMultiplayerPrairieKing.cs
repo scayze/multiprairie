@@ -221,6 +221,8 @@ namespace MultiPlayerPrairie
 			QUIT = 1
 		}
 
+		public List<BasePlayer> playerList;
+		
 		public Player player1;
 
 		public PlayerSlave player2;
