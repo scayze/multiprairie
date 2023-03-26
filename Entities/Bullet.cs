@@ -103,25 +103,6 @@ namespace MultiplayerPrairieKing.Entities
 					{
 						monsterAfterDamageHealth = monster.health;
 						gameInstance.AddGuts(monster.position.Location, monster.type);
-						POWERUP_TYPE loot = monster.GetLootDrop();
-						if (gameInstance.whichRound == 1 && Game1.random.NextDouble() < 0.5)
-						{
-							loot = POWERUP_TYPE.LOG;
-						}
-						if (gameInstance.whichRound > 0 && (loot == POWERUP_TYPE.ZOMBIE || loot == POWERUP_TYPE.LIFE) && Game1.random.NextDouble() < 0.4)
-						{
-							loot = POWERUP_TYPE.LOG;
-						}
-						if (loot != POWERUP_TYPE.LOG && gameInstance.whichWave != 12)
-						{
-							gameInstance.NETspawnPowerup(loot, monster.position.Location, gameInstance.lootDuration);
-						}
-
-						//NET EnemyKilled
-						PK_EnemyKilled mEnemyKilled = new();
-						mEnemyKilled.id = monster.id;
-						gameInstance.modInstance.Helper.Multiplayer.SendMessage(mEnemyKilled, "PK_EnemyKilled");
-						Game1.playSound("Cowboy_monsterDie");
 
 						gameInstance.monsters.RemoveAt(k);
 					}

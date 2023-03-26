@@ -123,10 +123,10 @@ namespace MultiplayerPrairieKing.Entities
 			//NET spawn outlaw
 			if (gameInstance.isHost)
 			{
-				this.id = gameInstance.modInstance.Helper.Multiplayer.GetNewID();
+				id = gameInstance.modInstance.Helper.Multiplayer.GetNewID();
 
 				PK_EnemySpawn message = new();
-				message.id = this.id;
+				message.id = id;
 				message.which = (int)which;
 				message.position = position;
 				message.health = health;
@@ -140,28 +140,28 @@ namespace MultiplayerPrairieKing.Entities
 			{
 				if (flashColorTimer > 0f)
 				{
-					b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(position.X, position.Y), new Rectangle(480, 1696, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, (float)position.Y / 10000f + 0.001f);
+					b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(position.X, position.Y), new Rectangle(480, 1696, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, position.Y / 10000f + 0.001f);
 				}
 				else
 				{
-					b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(position.X, position.Y), new Rectangle(576, 1712, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, (float)position.Y / 10000f + 0.001f);
+					b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(position.X, position.Y), new Rectangle(576, 1712, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, position.Y / 10000f + 0.001f);
 				}
 			}
 			else if (!invisible)
 			{
 				if (flashColorTimer > 0f)
 				{
-					b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(position.X, position.Y), new Rectangle(352 + (int)type * 16, 1696, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, (float)position.Y / 10000f + 0.001f);
+					b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(position.X, position.Y), new Rectangle(352 + (int)type * 16, 1696, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, position.Y / 10000f + 0.001f);
 				}
 				else
 				{
-					b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(position.X, position.Y), new Rectangle(352 + ((int)type * 2 + ((movementAnimationTimer < 250f) ? 1 : 0)) * 16, 1712, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, (float)position.Y / 10000f + 0.001f);
+					b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(position.X, position.Y), new Rectangle(352 + ((int)type * 2 + ((movementAnimationTimer < 250f) ? 1 : 0)) * 16, 1712, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, position.Y / 10000f + 0.001f);
 				}
 				if (gameInstance.monsterConfusionTimer > 0)
 				{
-					b.DrawString(Game1.smallFont, "?", topLeftScreenCoordinate + new Vector2((float)(position.X + TileSize / 2) - Game1.smallFont.MeasureString("?").X / 2f, position.Y - TileSize / 2), new Color(88, 29, 43), 0f, Vector2.Zero, 1f, SpriteEffects.None, (float)position.Y / 10000f);
-					b.DrawString(Game1.smallFont, "?", topLeftScreenCoordinate + new Vector2((float)(position.X + TileSize / 2) - Game1.smallFont.MeasureString("?").X / 2f + 1f, position.Y - TileSize / 2), new Color(88, 29, 43), 0f, Vector2.Zero, 1f, SpriteEffects.None, (float)position.Y / 10000f);
-					b.DrawString(Game1.smallFont, "?", topLeftScreenCoordinate + new Vector2((float)(position.X + TileSize / 2) - Game1.smallFont.MeasureString("?").X / 2f - 1f, position.Y - TileSize / 2), new Color(88, 29, 43), 0f, Vector2.Zero, 1f, SpriteEffects.None, (float)position.Y / 10000f);
+					b.DrawString(Game1.smallFont, "?", topLeftScreenCoordinate + new Vector2((position.X + TileSize / 2) - Game1.smallFont.MeasureString("?").X / 2f, position.Y - TileSize / 2), new Color(88, 29, 43), 0f, Vector2.Zero, 1f, SpriteEffects.None, position.Y / 10000f);
+					b.DrawString(Game1.smallFont, "?", topLeftScreenCoordinate + new Vector2((position.X + TileSize / 2) - Game1.smallFont.MeasureString("?").X / 2f + 1f, position.Y - TileSize / 2), new Color(88, 29, 43), 0f, Vector2.Zero, 1f, SpriteEffects.None, position.Y / 10000f);
+					b.DrawString(Game1.smallFont, "?", topLeftScreenCoordinate + new Vector2((position.X + TileSize / 2) - Game1.smallFont.MeasureString("?").X / 2f - 1f, position.Y - TileSize / 2), new Color(88, 29, 43), 0f, Vector2.Zero, 1f, SpriteEffects.None, position.Y / 10000f);
 				}
 			}
 		}
@@ -172,6 +172,7 @@ namespace MultiplayerPrairieKing.Entities
 			health = Math.Max(0, health);
 			if (health <= 0)
 			{
+				OnDeath();
 				return true;
 			}
 			Game1.playSound("cowboy_monsterhit");
@@ -182,10 +183,20 @@ namespace MultiplayerPrairieKing.Entities
 
 		public virtual POWERUP_TYPE GetLootDrop()
 		{
+			POWERUP_TYPE lootdrop = POWERUP_TYPE.LOG;
+			//Half chances to drop something second playthrough
+			if (gameInstance.newGamePlus == 1 && Game1.random.NextDouble() < 0.5)
+			{
+				return POWERUP_TYPE.LOG;
+			}
+
+			//Dont drop anything from transformed spikeys
 			if (type == MONSTER_TYPE.spikey && special)
 			{
 				return POWERUP_TYPE.LOG;
 			}
+
+			//Chances
 			if (Game1.random.NextDouble() < 0.05)
 			{
 				if (type != 0 && Game1.random.NextDouble() < 0.1)
@@ -202,20 +213,32 @@ namespace MultiplayerPrairieKing.Entities
 			{
 				if (Game1.random.NextDouble() < 0.15)
 				{
-					return (POWERUP_TYPE)Game1.random.Next(6, 8);
+					POWERUP_TYPE t = (POWERUP_TYPE)Game1.random.Next(6, 8);
+					if (gameInstance.newGamePlus > 0 && (t == POWERUP_TYPE.ZOMBIE || t == POWERUP_TYPE.LIFE) && Game1.random.NextDouble() < 0.4)
+					{
+						t = POWERUP_TYPE.LOG;
+					}
+					return t;
 				}
 				if (Game1.random.NextDouble() < 0.07)
 				{
 					return POWERUP_TYPE.SHERRIFF;
 				}
 
-				int loot = Game1.random.Next(2, 10);
-				if (loot == 5 && Game1.random.NextDouble() < 0.4)
+				POWERUP_TYPE loot = (POWERUP_TYPE)Game1.random.Next(2, 10);
+				if (loot == POWERUP_TYPE.ZOMBIE && Game1.random.NextDouble() < 0.4)
 				{
-					loot = Game1.random.Next(2, 10);
+					loot = (POWERUP_TYPE)Game1.random.Next(2, 10);
 				}
-				return (POWERUP_TYPE)loot;
+
+				if (gameInstance.newGamePlus > 0 && (loot == POWERUP_TYPE.ZOMBIE || loot == POWERUP_TYPE.LIFE) && Game1.random.NextDouble() < 0.4)
+				{
+					loot = POWERUP_TYPE.LOG;
+				}
+
+				return loot;
 			}
+
 			return POWERUP_TYPE.LOG;
 		}
 
@@ -465,7 +488,19 @@ namespace MultiplayerPrairieKing.Entities
 
 		public virtual void OnDeath()
 		{
+			//Spawn Pickup if host
+			POWERUP_TYPE loot = GetLootDrop();
 
+			if (loot != POWERUP_TYPE.LOG && gameInstance.whichWave != 12 && gameInstance.isHost)
+			{
+				gameInstance.NETspawnPowerup(loot, position.Location, gameInstance.lootDuration);
+			}
+
+			//NET EnemyKilled
+			PK_EnemyKilled mEnemyKilled = new();
+			mEnemyKilled.id = id;
+			gameInstance.modInstance.Helper.Multiplayer.SendMessage(mEnemyKilled, "PK_EnemyKilled");
+			Game1.playSound("Cowboy_monsterDie");
 		}
 	}
 }

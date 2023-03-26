@@ -47,7 +47,7 @@ namespace MultiplayerPrairieKing.Entities.Enemies
 
 		public override void Draw(SpriteBatch b)
 		{
-			b.Draw(Game1.staminaRect, new Rectangle((int)topLeftScreenCoordinate.X, (int)topLeftScreenCoordinate.Y + 16 * TileSize + 3, (int)((16 * TileSize) * (health / fullHealth)), TileSize / 3), new Color(188, 51, 74));
+			b.Draw(Game1.staminaRect, new Rectangle((int)topLeftScreenCoordinate.X, (int)topLeftScreenCoordinate.Y + 16 * TileSize + 3, ((16 * TileSize) * (health / fullHealth)), TileSize / 3), new Color(188, 51, 74));
 			if (flashColorTimer > 0f)
 			{
 				b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(position.X, position.Y), new Rectangle(496, 1696, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, position.Y / 10000f + 0.001f);
@@ -102,8 +102,8 @@ namespace MultiplayerPrairieKing.Entities.Enemies
 						break;
 					}
 					phase = (OUTLAW_PHASE)Game1.random.Next(1, 5);
-					dartLeft = (playerPosition.X < (float)position.X);
-					if (playerPosition.X > (float)(7 * TileSize) && playerPosition.X < (float)(9 * TileSize))
+					dartLeft = (playerPosition.X < position.X);
+					if (playerPosition.X > (7 * TileSize) && playerPosition.X < (9 * TileSize))
 					{
 						if (Game1.random.NextDouble() < 0.66 || phase == OUTLAW_PHASE.RUNANDGUN)
 						{
@@ -230,11 +230,11 @@ namespace MultiplayerPrairieKing.Entities.Enemies
 						phaseInternalTimer = Game1.random.Next(4000, 7000);
 					}
 					phaseInternalTimer -= time.ElapsedGameTime.Milliseconds;
-					if ((float)position.X > playerPosition.X && (float)position.X - playerPosition.X > 3f)
+					if (position.X > playerPosition.X && position.X - playerPosition.X > 3f)
 					{
 						position.X -= 2;
 					}
-					else if ((float)position.X < playerPosition.X && playerPosition.X - (float)position.X > 3f)
+					else if (position.X < playerPosition.X && playerPosition.X - position.X > 3f)
 					{
 						position.X += 2;
 					}
@@ -338,6 +338,8 @@ namespace MultiplayerPrairieKing.Entities.Enemies
 
 		public override void OnDeath()
 		{
+			base.OnDeath();
+
 			if (gameInstance.isHost)
 			{
 				gameInstance.NETspawnPowerup((gameInstance.world == 0) ? POWERUP_TYPE.LOG : POWERUP_TYPE.SKULL, new Point(8 * TileSize, 10 * TileSize), 9999999);

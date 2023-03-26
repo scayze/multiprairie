@@ -1,6 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MultiPlayerPrairie;
+using StardewModdingAPI;
 using StardewValley;
 using System;
 using System.Collections.Generic;
@@ -18,10 +19,12 @@ namespace MultiplayerPrairieKing.Entities
 
 		int shotTimer;
 		readonly int shootingDelay = 300;
+
 		
-		
+
 		public Player(GameMultiplayerPrairieKing game) : base(game)
         {
+			textureBase = Vector2.Zero;
 			ammoLevel = 0;
         }
 
@@ -257,34 +260,6 @@ namespace MultiplayerPrairieKing.Entities
 			gameInstance.NETmovePlayer(position);
 
 		}
-
-		public override void Draw(SpriteBatch b)
-        {
-			if (deathTimer <= 0f && (invincibleTimer <= 0 || invincibleTimer / 100 % 2 == 0))
-			{
-				if (holdItemTimer > 0)
-				{
-					b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + position + new Vector2(0f, -TileSize / 4), new Rectangle(384, 1760, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, position.Y / 10000f + 0.001f);
-					b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + position + new Vector2(0f, -TileSize * 2 / 3) + new Vector2(0f, -TileSize / 4), new Rectangle(320 + (int)itemToHold * 16, 1776, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, position.Y / 10000f + 0.002f);
-				}
-				else if (gameInstance.zombieModeTimer > 0)
-				{
-					b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + position + new Vector2(0f, -TileSize / 4), new Rectangle(352 + ((gameInstance.zombieModeTimer / 50 % 2 == 0) ? 16 : 0), 1760, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, position.Y / 10000f + 0.001f);
-				}
-				else if (movementDirections.Count == 0 && shootingDirections.Count == 0)
-				{
-					b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + position + new Vector2(0f, -TileSize / 4), new Rectangle(496, 1760, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, position.Y / 10000f + 0.001f);
-				}
-				else
-				{
-					int facingDirection = (shootingDirections.Count == 0) ? movementDirections.ElementAt(0) : shootingDirections.Last();
-					b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + position + new Vector2(0f, -TileSize / 4) + new Vector2(4f, 13f) * 3f, new Rectangle(483, 1760 + motionAnimationTimer / 100 * 3, 10, 3), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, position.Y / 10000f + 0.001f + 0.001f);
-					b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + position + new Vector2(3f, -TileSize / 4), new Rectangle(464 + facingDirection * 16, 1744, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, position.Y / 10000f + 0.002f + 0.001f);
-				}
-			}
-		}
-
-
 
 		public override void Die()
         {

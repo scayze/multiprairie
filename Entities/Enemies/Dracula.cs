@@ -81,6 +81,7 @@ namespace MultiplayerPrairieKing.Entities.Enemies
 
 		public override void OnDeath()
 		{
+			base.OnDeath();
 			//Play death sound
 			Game1.playSound("cowboy_explosion");
 
@@ -138,6 +139,7 @@ namespace MultiplayerPrairieKing.Entities.Enemies
 			health -= damage;
 			if (health < 0)
 			{
+				OnDeath();
 				return true;
 			}
 			flashColorTimer = 100f;

@@ -9,6 +9,8 @@ using HarmonyLib;
 using MultiplayerPrairieKing.Entities;
 using MultiplayerPrairieKing.Entities.Enemies;
 using static MultiPlayerPrairie.GameMultiplayerPrairieKing;
+using Microsoft.Xna.Framework.Graphics;
+using Character = MultiplayerPrairieKing.Entities.Character;
 
 namespace MultiPlayerPrairie
 {
@@ -102,8 +104,12 @@ namespace MultiPlayerPrairie
         /// <param name="helper">Provides simplified APIs for writing mods.</param>
         public override void Entry(IModHelper helper)
         {
-            instance = this; 
+            instance = this;
 
+            //Load custom texture for players
+            Character.texture = helper.Content.Load<Texture2D>("assets/poppetjes.png"); 
+
+            //Register to events
             helper.Events.GameLoop.UpdateTicking += this.OnUpdateTick;
             helper.Events.Input.ButtonPressed += this.OnButtonPressed;
             helper.Events.GameLoop.GameLaunched += this.OnGameLaunched;
@@ -116,6 +122,7 @@ namespace MultiPlayerPrairie
                 prefix: new HarmonyMethod(typeof(GameLocationPatches), nameof(GameLocationPatches.ShowPrairieKingMenu_Prefix))
             );
 
+            //Console commands
             helper.ConsoleCommands.Add("pk_SetStage", "Sets the new stage of prairie king.", this.SkipToStage);
             helper.ConsoleCommands.Add("pk_SetCoints", "Sets the amount of coins the player has in prairie king.", this.SetCoins);
         }
@@ -123,7 +130,7 @@ namespace MultiPlayerPrairie
         private void SetCoins(string command, string[] args)
         {
             GameMultiplayerPrairieKing PK_game = (GameMultiplayerPrairieKing)Game1.currentMinigame;
-            PK_game.coins = int.Parse(args[0]);
+            PK_game.Coins = int.Parse(args[0]);
         }
 
         private void SkipToStage(string command, string[] args)
@@ -282,6 +289,11 @@ namespace MultiPlayerPrairie
                     PK_game.UsePowerup((POWERUP_TYPE)mPowerupUse.type, true);
                     break;
 
+                case "PK_BuyItem":
+                    PK_BuyItem mBuyItem = e.ReadAs<PK_BuyItem>();
+                    PK_game.player2.HoldItem((ITEM_TYPE)mBuyItem.type, 2500);
+                    break;
+
                 case "PK_PlayerMove":
                     PK_PlayerMove mPlayerMove = e.ReadAs<PK_PlayerMove>();
 
@@ -406,6 +418,7 @@ namespace MultiPlayerPrairie
                         if (m.id == mEnemyKilled.id)
                         {
                             m.OnDeath();
+
                             PK_game.monsters.RemoveAt(i);
                             PK_game.AddGuts(m.position.Location, m.type);
                             Game1.playSound("Cowboy_monsterDie");
@@ -442,6 +455,12 @@ namespace MultiPlayerPrairie
     public class PK_UsePowerup
     {
         public int type = -69;
+    }
+
+    public class PK_BuyItem
+    {
+        public int type = -69;
+        //TODO: player ID for multiple players?
     }
 
     //Player Sync
