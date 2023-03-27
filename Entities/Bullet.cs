@@ -77,7 +77,7 @@ namespace MultiplayerPrairieKing.Entities
 
 		public void EnemyUpdate()
         {
-			if (!gameInstance.player1.IsInvincible() && gameInstance.player1.deathTimer <= 0f && gameInstance.player1.boundingBox.Intersects(new Rectangle(position.X, position.Y, 15, 15)))
+			if (!gameInstance.player.IsInvincible() && gameInstance.player.deathTimer <= 0f && gameInstance.player.boundingBox.Intersects(new Rectangle(position.X, position.Y, 15, 15)))
 			{
 				gameInstance.PlayerDie();
 

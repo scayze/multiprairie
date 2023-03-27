@@ -28,7 +28,7 @@ namespace MultiplayerPrairieKing.Entities
 		protected ITEM_TYPE itemToHold = ITEM_TYPE.NONE;
 
 		public static Texture2D texture;
-		protected Vector2 textureBase;
+		public Vector2 textureBase;
 
 		public BasePlayer(GameMultiplayerPrairieKing game)
 		{
@@ -121,7 +121,7 @@ namespace MultiplayerPrairieKing.Entities
 				}
 				else if (gameInstance.zombieModeTimer > 0)
 				{
-					b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + position + new Vector2(0f, -TileSize / 4), new Rectangle(352 + ((gameInstance.zombieModeTimer / 50 % 2 == 0) ? 16 : 0), 1760, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, position.Y / 10000f + 0.001f);
+					b.Draw(texture, topLeftScreenCoordinate + position + new Vector2(0f, -TileSize / 4), new Rectangle((int)textureBase.X + ((gameInstance.zombieModeTimer / 50 % 2 == 0) ? 16 : 0), (int)textureBase.Y + 32, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, position.Y / 10000f + 0.001f);
 				}
 				else if (movementDirections.Count == 0 && shootingDirections.Count == 0)
 				{

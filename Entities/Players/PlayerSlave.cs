@@ -10,7 +10,7 @@ namespace MultiplayerPrairieKing.Entities
     {
         public PlayerSlave(GameMultiplayerPrairieKing game) : base(game)
         {
-			textureBase = new Vector2(64, 0);
+			
         }
 
         public override void Tick(GameTime time)

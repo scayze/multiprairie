@@ -51,7 +51,7 @@ namespace MultiplayerPrairieKing.Entities.Enemies
 		{
 			if (phase != DRACULA_PHASE.GLOATING_PHASE)
 			{
-				b.Draw(Game1.staminaRect, new Rectangle((int)topLeftScreenCoordinate.X, (int)topLeftScreenCoordinate.Y + 16 * TileSize + 3, ((16 * TileSize) * (int)((float)health / (float)fullHealth)), TileSize / 3), new Color(188, 51, 74));
+				b.Draw(Game1.staminaRect, new Rectangle((int)topLeftScreenCoordinate.X, (int)topLeftScreenCoordinate.Y + 16 * TileSize + 3, (int)((16f * TileSize) * ((float)health / (float)fullHealth)), TileSize / 3), new Color(188, 51, 74));
 			}
 			if (flashColorTimer > 0f)
 			{
@@ -182,7 +182,7 @@ namespace MultiplayerPrairieKing.Entities.Enemies
 							phaseInternalTimer = 9999;
 						}
 						Vector2 target = playerPosition;
-						if (gameInstance.player1.deathTimer > 0f)
+						if (gameInstance.player.deathTimer > 0f)
 						{
 							break;
 						}
@@ -248,9 +248,9 @@ namespace MultiplayerPrairieKing.Entities.Enemies
 						if (shootTimer < 0)
 						{
 							Vector2 trajectory = Utility.getVelocityTowardPoint(new Point(position.X + TileSize / 2, position.Y), playerPosition + new Vector2(TileSize / 2, TileSize / 2), 8f);
-							if (gameInstance.player1.movementDirections.Count > 0)
+							if (gameInstance.player.movementDirections.Count > 0)
 							{
-								trajectory = Utility.getTranslatedVector2(trajectory, gameInstance.player1.movementDirections.Last(), 3f);
+								trajectory = Utility.getTranslatedVector2(trajectory, gameInstance.player.movementDirections.Last(), 3f);
 							}
 							if (gameInstance.isHost) gameInstance.NETspawnBullet(false, new Point(position.X + TileSize / 2, position.Y + TileSize / 2), new Point((int)trajectory.X, (int)trajectory.Y), 1);
 							shootTimer = 250;

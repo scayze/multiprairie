@@ -24,7 +24,6 @@ namespace MultiplayerPrairieKing.Entities
 
 		public Player(GameMultiplayerPrairieKing game) : base(game)
         {
-			textureBase = Vector2.Zero;
 			ammoLevel = 0;
         }
 

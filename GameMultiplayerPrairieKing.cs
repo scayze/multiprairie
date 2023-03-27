@@ -95,10 +95,11 @@ namespace MultiPlayerPrairie
 		public void NETmovePlayer(Vector2 pos)
         {
 			PK_PlayerMove message = new();
+			message.playerId = modInstance.playerID.Value;
 			message.position = pos;
 			message.id = Game1.player.UniqueMultiplayerID;
-			message.shootingDirections = player1.shootingDirections;
-			message.movementDirections = player1.movementDirections;
+			message.shootingDirections = player.shootingDirections;
+			message.movementDirections = player.movementDirections;
 			modInstance.Helper.Multiplayer.SendMessage(message, "PK_PlayerMove");
         }
 
@@ -150,6 +151,8 @@ namespace MultiPlayerPrairie
 		public const int deathDelay = 3000;
 
 		public static Texture2D shopBubbleTexture;
+		public static Texture2D startScreenTexture;
+		public static Texture2D startScreenPoppetjesTexture;
 
 		public DIFFICULTY difficulty = DIFFICULTY.NORMAL;
 
@@ -221,11 +224,9 @@ namespace MultiPlayerPrairie
 			QUIT = 1
 		}
 
-		public List<BasePlayer> playerList;
-		
-		public Player player1;
+		public Dictionary<long, BasePlayer> playerList = new();
 
-		public PlayerSlave player2;
+		public Player player;
 
 		public int newGamePlus;
 
@@ -331,9 +332,7 @@ namespace MultiPlayerPrairie
 
 		int endCutscenePhase;
 
-		int startTimer;
-
-		bool onStartMenu;
+		public bool onStartMenu;
 
 		bool shopping;
 
@@ -390,10 +389,10 @@ namespace MultiPlayerPrairie
 			}
 			modInstance.Monitor.Log("FOUND SAVEFILE WEJO");
 			AbigailGame.JOTPKProgress save_data = Game1.player.jotpkProgress.Value;
-			player1.ammoLevel = save_data.ammoLevel.Value;
-			player1.runSpeedLevel = save_data.runSpeedLevel.Value;
-			player1.fireSpeedLevel = save_data.fireSpeedLevel.Value;
-			player1.bulletDamage = save_data.bulletDamage.Value;
+			player.ammoLevel = save_data.ammoLevel.Value;
+			player.runSpeedLevel = save_data.runSpeedLevel.Value;
+			player.fireSpeedLevel = save_data.fireSpeedLevel.Value;
+			player.bulletDamage = save_data.bulletDamage.Value;
 			Coins = save_data.coins.Value;
 			died = save_data.died.Value;
 			lives = save_data.lives.Value;
@@ -411,7 +410,7 @@ namespace MultiPlayerPrairie
 			ApplyLevelSpecificStates();
 			if (shootoutLevel)
 			{
-				player1.position = new Vector2(8 * TileSize, 3 * TileSize);
+				player.position = new Vector2(8 * TileSize, 3 * TileSize);
 			}
 			return true;
 		}
@@ -423,10 +422,10 @@ namespace MultiPlayerPrairie
 				Game1.player.jotpkProgress.Value = new AbigailGame.JOTPKProgress();
 			}
 			AbigailGame.JOTPKProgress save_data = Game1.player.jotpkProgress.Value;
-			save_data.ammoLevel.Value = player1.ammoLevel;
-			save_data.runSpeedLevel.Value = player1.runSpeedLevel;
-			save_data.fireSpeedLevel.Value = player1.fireSpeedLevel;
-			save_data.bulletDamage.Value = player1.bulletDamage;
+			save_data.ammoLevel.Value = player.ammoLevel;
+			save_data.runSpeedLevel.Value = player.runSpeedLevel;
+			save_data.fireSpeedLevel.Value = player.fireSpeedLevel;
+			save_data.bulletDamage.Value = player.bulletDamage;
 			save_data.coins.Value = Coins;
 			save_data.died.Value = died;
 			save_data.lives.Value = lives;
@@ -453,14 +452,53 @@ namespace MultiPlayerPrairie
 			this.modInstance = mod;
 			this.isHost = isHost;
 			Reset();
+
+			/*
 			if (LoadGame())
 			{
 				map = MapLoader.GetMap(whichWave);
 			}
+			*/
+		}
 
-			if (modInstance.Config.Difficulty == "Easy") difficulty = DIFFICULTY.EASY;
-			else if (modInstance.Config.Difficulty == "Normal") difficulty = DIFFICULTY.NORMAL;
-			else if (modInstance.Config.Difficulty == "Hard") difficulty = DIFFICULTY.HARD;
+		public void InstantiatePlayers()
+        {
+			//Let players start in a square
+			List<Vector2> startPositions = new List<Vector2>()
+			{
+				new Vector2(352f, 352f) + new Vector2(0,0),
+				new Vector2(352f, 352f) + new Vector2(64,0),
+				new Vector2(352f, 352f) + new Vector2(0,64),
+				new Vector2(352f, 352f) + new Vector2(64,64),
+			};
+
+			playerList.Clear();
+			for(int i=0; i<modInstance.playerList.Count; i++)
+			{
+				long pid = modInstance.playerList[i];
+
+				BasePlayer p;
+				if (pid == modInstance.playerID.Value)
+				{
+					player = new Player(this);
+					p = player;
+				}
+				else
+				{
+					p = new PlayerSlave(this);
+				}
+				p.textureBase = new Vector2(i * 64, 0);
+				p.position = startPositions[i];
+				playerList.Add(pid, p);
+			}
+
+			//NET Player Move
+			NETmovePlayer(player.position);
+
+			player.boundingBox.X = (int)player.position.X + TileSize / 4;
+			player.boundingBox.Y = (int)player.position.Y + TileSize / 4;
+			player.boundingBox.Width = TileSize / 2;
+			player.boundingBox.Height = TileSize / 2;
 		}
 
 		public void ApplyNewGamePlus()
@@ -488,8 +526,7 @@ namespace MultiPlayerPrairie
 			endCutscenePhase = 0;
 			endCutsceneTimer = 0;
 			gameOver = false;
-			onStartMenu = true;
-			startTimer = 0;
+			onStartMenu = false;
 			powerups.Clear();
 			world = 0;
 			Game1.changeMusicTrack("none", track_interruptable: false, Game1.MusicContext.MiniGame);
@@ -516,28 +553,15 @@ namespace MultiPlayerPrairie
 				}
 			}
 
-			if(isHost)
-            {
-				player1.position = new Vector2(384f, 384f);
-				player2.position = new Vector2(432f, 384f);
-			}
-			else
-            {
-				player2.position = new Vector2(384f, 384f);
-				player1.position = new Vector2(432f, 384f);
-			}
-				
 			//NET Player Move
-			NETmovePlayer(player1.position);
+			player.position = new Vector2(384f, 384f);
+			NETmovePlayer(player.position);
 
-			player1.boundingBox.X = (int)player1.position.X + TileSize / 4;
-			player1.boundingBox.Y = (int)player1.position.Y + TileSize / 4;
-			player1.boundingBox.Width = TileSize / 2;
-			player1.boundingBox.Height = TileSize / 2;
+			player.boundingBox.X = (int)player.position.X + TileSize / 4;
+			player.boundingBox.Y = (int)player.position.Y + TileSize / 4;
+			player.boundingBox.Width = TileSize / 2;
+			player.boundingBox.Height = TileSize / 2;
 
-			//If playing with abigail
-			onStartMenu = false; //TODO show anyway?
-			
 			betweenWaveTimer += 1500;
 
 			for (int j = 0; j < 4; j++)
@@ -575,8 +599,7 @@ namespace MultiPlayerPrairie
 			betweenWaveTimer = 5000;
 			gopherRunning = false;
 			hasGopherAppeared = false;
-			player1 = new(this);
-			player2 = new(this);
+			playerList.Clear();
 			outlawSong = null;
 			overworldSong = null;
 			endCutscene = false;
@@ -584,7 +607,6 @@ namespace MultiPlayerPrairie
 			endCutsceneTimer = 0;
 			gameOver = false;
 			onStartMenu = true;
-			startTimer = 0;
 			powerups.Clear();
 			world = 0;
 			Game1.changeMusicTrack("none", track_interruptable: false, Game1.MusicContext.MiniGame);
@@ -610,20 +632,7 @@ namespace MultiPlayerPrairie
 					}
 				}
 			}
-			player1.position = new Vector2(384f, 384f);
 
-			//NET Player Move
-			NETmovePlayer(player1.position);
-
-			player1.boundingBox.X = (int)player1.position.X + TileSize / 4;
-			player1.boundingBox.Y = (int)player1.position.Y + TileSize / 4;
-			player1.boundingBox.Width = TileSize / 2;
-			player1.boundingBox.Height = TileSize / 2;
-
-			//If playing with abigail
-			onStartMenu = false; //TODO show anyway?
-			player2.position = new Vector2(432f, 384f);
-			player2.boundingBox = new Rectangle(9 * TileSize, 8 * TileSize, TileSize, TileSize);
 			betweenWaveTimer += 1500;
 
 			for (int j = 0; j < 4; j++)
@@ -692,12 +701,13 @@ namespace MultiPlayerPrairie
 			return Game1.options.SnappyMenus;
 		}
 
-		public void UsePowerup(POWERUP_TYPE which, bool visualOnly = false)
+		public void UsePowerup(POWERUP_TYPE which, long pid = -1)
 		{
 			//If not visual only (aka sync call for player 2), send network message
-			if(!visualOnly)
-            {
+			if (pid == -1)
+			{
 				PK_UsePowerup mUsePowerup = new();
+				mUsePowerup.playerId = modInstance.playerID.Value;
 				mUsePowerup.type = (int)which;
 				modInstance.Helper.Multiplayer.SendMessage(mUsePowerup, "PK_UsePowerup");
 			}
@@ -711,8 +721,10 @@ namespace MultiPlayerPrairie
 			switch (which)
 			{
 				case POWERUP_TYPE.HEART:
-					player1.HoldItem(ITEM_TYPE.FINISHED_GAME, 4000);
-					player2.HoldItem(ITEM_TYPE.FINISHED_GAME, 4000);
+					foreach(BasePlayer p in playerList.Values)
+                    {
+						p.HoldItem(ITEM_TYPE.FINISHED_GAME, 4000);
+					}
 					
 					Game1.playSound("Cowboy_Secret");
 					endCutscene = true;
@@ -733,7 +745,7 @@ namespace MultiPlayerPrairie
 					break;
 
 				case POWERUP_TYPE.SHERRIFF:
-					if (visualOnly) break;
+					if (pid != -1) break;
 					UsePowerup(POWERUP_TYPE.SHOTGUN);
 					UsePowerup(POWERUP_TYPE.RAPIDFIRE);
 					UsePowerup(POWERUP_TYPE.SPEED);
@@ -763,21 +775,21 @@ namespace MultiPlayerPrairie
 
 					monsterConfusionTimer = 4000;
 
-					if(visualOnly)
+					if (pid != -1)
 					{
-						temporarySprites.Add(new TemporaryAnimatedSprite("LooseSprites\\Cursors", new Rectangle(464, 1792, 16, 16), 120f, 5, 0, player2.position + topLeftScreenCoordinate + new Vector2(TileSize / 2, TileSize / 2), flicker: false, flipped: false, 1f, 0f, Color.White, 3f, 0f, 0f, 0f, local: true));
+						temporarySprites.Add(new TemporaryAnimatedSprite("LooseSprites\\Cursors", new Rectangle(464, 1792, 16, 16), 120f, 5, 0, playerList[pid].position + topLeftScreenCoordinate + new Vector2(TileSize / 2, TileSize / 2), flicker: false, flipped: false, 1f, 0f, Color.White, 3f, 0f, 0f, 0f, local: true));
 						break;
 					}
 
 					Point teleportSpot = Point.Zero;
 					int tries = 0;
-					while ((Math.Abs(teleportSpot.X - player1.position.X) < 8f || Math.Abs(teleportSpot.Y - player1.position.Y) < 8f || IsCollidingWithMap(teleportSpot) || IsCollidingWithMonster(new Rectangle(teleportSpot.X, teleportSpot.Y, TileSize, TileSize), null)) && tries < 10)
+					while ((Math.Abs(teleportSpot.X - player.position.X) < 8f || Math.Abs(teleportSpot.Y - player.position.Y) < 8f || IsCollidingWithMap(teleportSpot) || IsCollidingWithMonster(new Rectangle(teleportSpot.X, teleportSpot.Y, TileSize, TileSize), null)) && tries < 10)
 					{
 						teleportSpot = new Point(Game1.random.Next(TileSize, 16 * TileSize - TileSize), Game1.random.Next(TileSize, 16 * TileSize - TileSize));
 						tries++;
 					}
 
-					temporarySprites.Add(new TemporaryAnimatedSprite("LooseSprites\\Cursors", new Rectangle(464, 1792, 16, 16), 120f, 5, 0, player1.position + topLeftScreenCoordinate + new Vector2(TileSize / 2, TileSize / 2), flicker: false, flipped: false, 1f, 0f, Color.White, 3f, 0f, 0f, 0f, local: true));
+					temporarySprites.Add(new TemporaryAnimatedSprite("LooseSprites\\Cursors", new Rectangle(464, 1792, 16, 16), 120f, 5, 0, player.position + topLeftScreenCoordinate + new Vector2(TileSize / 2, TileSize / 2), flicker: false, flipped: false, 1f, 0f, Color.White, 3f, 0f, 0f, 0f, local: true));
 					temporarySprites.Add(new TemporaryAnimatedSprite("LooseSprites\\Cursors", new Rectangle(464, 1792, 16, 16), 120f, 5, 0, new Vector2(teleportSpot.X, teleportSpot.Y) + topLeftScreenCoordinate + new Vector2(TileSize / 2, TileSize / 2), flicker: false, flipped: false, 1f, 0f, Color.White, 3f, 0f, 0f, 0f, local: true));
 					temporarySprites.Add(new TemporaryAnimatedSprite("LooseSprites\\Cursors", new Rectangle(464, 1792, 16, 16), 120f, 5, 0, new Vector2(teleportSpot.X - TileSize / 2, teleportSpot.Y) + topLeftScreenCoordinate + new Vector2(TileSize / 2, TileSize / 2), flicker: false, flipped: false, 1f, 0f, Color.White, 3f, 0f, 0f, 0f, local: true)
 					{
@@ -799,12 +811,12 @@ namespace MultiPlayerPrairie
 
 					if (tries < 10)
 					{
-						player1.position = new Vector2(teleportSpot.X, teleportSpot.Y);
+						player.position = new Vector2(teleportSpot.X, teleportSpot.Y);
 
 						//NET Player Move
-						NETmovePlayer(player1.position);
+						NETmovePlayer(player.position);
 
-						player1.SetInvincible(4000);
+						player.SetInvincible(4000);
 						Game1.playSound("cowboy_powerup");
 					}
 					break;
@@ -831,18 +843,18 @@ namespace MultiPlayerPrairie
 						{
 							AddGuts(e.position.Location, e.type);
 
-							if (visualOnly) continue;
+							if (pid != -1) continue;
 
 							PK_EnemyKilled mEnemyKilled = new();
 							mEnemyKilled.id = e.id;
 							modInstance.Helper.Multiplayer.SendMessage(mEnemyKilled, "PK_EnemyKilled");
 						}
 
-						if (!visualOnly) monsters.Clear();
+						if (pid == -1) monsters.Clear();
 					}
 					else
 					{
-						if (visualOnly) break;
+						if (pid != -1) break;
 						foreach (Enemy c in monsters)
 						{
 							c.TakeDamage(30);
@@ -854,7 +866,7 @@ namespace MultiPlayerPrairie
 				case POWERUP_TYPE.SPREAD:
 				case POWERUP_TYPE.RAPIDFIRE:
 				case POWERUP_TYPE.SHOTGUN:
-					if (visualOnly) break;
+					if (pid != -1) break;
 					Game1.playSound("cowboy_gunload");
 					activePowerups.Add(which, powerupDuration + 2000);
 					break;
@@ -868,7 +880,7 @@ namespace MultiPlayerPrairie
 					Game1.playSound("Pickup_Coin15");
 					break;
 				default:
-					if (visualOnly) break;
+					if (pid != -1) break;
 					activePowerups.Add(which, powerupDuration);
 					Game1.playSound("cowboy_powerup");
 					break;
@@ -881,8 +893,10 @@ namespace MultiPlayerPrairie
 
 		public void StartGopherTrain(ITEM_TYPE item = ITEM_TYPE.NONE)
         {
-			player1.HoldItem(item, 2000);
-			player2.HoldItem(item, 2000);
+			foreach (BasePlayer p in playerList.Values)
+			{
+				p.HoldItem(item, 2000);
+			}
 
 			Game1.playSound("Cowboy_Secret");
 			gopherTrain = true;
@@ -988,23 +1002,28 @@ namespace MultiPlayerPrairie
 			{
 				overworldSong.Stop(AudioStopOptions.Immediate);
 			}
-			temporarySprites.Add(new TemporaryAnimatedSprite("LooseSprites\\Cursors", new Rectangle(464, 1808, 16, 16), 120f, 5, 0, player1.position + topLeftScreenCoordinate, flicker: false, flipped: false, 1f, 0f, Color.White, 3f, 0f, 0f, 0f, local: true));
+			temporarySprites.Add(new TemporaryAnimatedSprite("LooseSprites\\Cursors", new Rectangle(464, 1808, 16, 16), 120f, 5, 0, player.position + topLeftScreenCoordinate, flicker: false, flipped: false, 1f, 0f, Color.White, 3f, 0f, 0f, 0f, local: true));
 			waveTimer = Math.Min(80000, waveTimer + 10000);
 			betweenWaveTimer = 4000;
 			lives--;
 
-			player1.Die();
-			player2.Die();
+			foreach(BasePlayer p in playerList.Values)
+            {
+				p.Die();
+            }
 
 			if (lives < 0)
 			{
-				temporarySprites.Add(new TemporaryAnimatedSprite("LooseSprites\\Cursors", new Rectangle(464, 1808, 16, 16), 550f, 5, 0, player1.position + topLeftScreenCoordinate, flicker: false, flipped: false, 1f, 0f, Color.White, 3f, 0f, 0f, 0f, local: true)
+				temporarySprites.Add(new TemporaryAnimatedSprite("LooseSprites\\Cursors", new Rectangle(464, 1808, 16, 16), 550f, 5, 0, player.position + topLeftScreenCoordinate, flicker: false, flipped: false, 1f, 0f, Color.White, 3f, 0f, 0f, 0f, local: true)
 				{
 					alpha = 0.001f,
 					endFunction = AfterPlayerDeathFunction
 				});
-				player1.deathTimer *= 3f;
-				player2.deathTimer *= 3f;
+
+				foreach (BasePlayer p in playerList.Values)
+				{
+					p.deathTimer *= 3f;
+				}
 
 				Game1.player.jotpkProgress.Value = null;
 			}
@@ -1220,7 +1239,6 @@ namespace MultiPlayerPrairie
 				_buttonHeldState.Add(GameKeys.Exit);
 			}
 		}
-
 		public bool tick(GameTime time)
 		{
 			Game1.gameTimeInterval = 0;
@@ -1233,10 +1251,8 @@ namespace MultiPlayerPrairie
 				}
 			}
 			_buttonHeldState.Clear();
-			if (startTimer <= 0)
-			{
-				UpdateInput();
-			}
+			UpdateInput();
+
 			for (int l = 0; l < 11; l++)
 			{
 				if (_buttonHeldState.Contains((GameKeys)l))
@@ -1258,24 +1274,11 @@ namespace MultiPlayerPrairie
 			}
 			if (gameOver)
 			{
-				startTimer = 0;
+				//startTimer = 0;
 				return false;
 			}
 			if (onStartMenu)
 			{
-				if (startTimer > 0)
-				{
-					startTimer -= time.ElapsedGameTime.Milliseconds;
-					if (startTimer <= 0)
-					{
-						onStartMenu = false;
-					}
-				}
-				else
-				{
-					Game1.playSound("Pickup_Coin15");
-					startTimer = 1500;
-				}
 				return false;
 			}
 			if (gamerestartTimer > 0)
@@ -1324,10 +1327,10 @@ namespace MultiPlayerPrairie
 							map = MapLoader.GetMap(-1);
 							break;
 						case 2:
-							player1.position = new Vector2(0f, 8 * TileSize);
+							player.position = new Vector2(0f, 8 * TileSize);
 
 							//NET Player Move
-							NETmovePlayer(player1.position);
+							NETmovePlayer(player.position);
 
 							endCutsceneTimer = 12000;
 							break;
@@ -1359,11 +1362,11 @@ namespace MultiPlayerPrairie
 							break;
 					}
 				}
-				if (endCutscenePhase == 2 && player1.position.X < (float)(9 * TileSize))
+				if (endCutscenePhase == 2 && player.position.X < (float)(9 * TileSize))
 				{
-					player1.position.X += 1f;
-					player1.motionAnimationTimer += time.ElapsedGameTime.Milliseconds;
-					player1.motionAnimationTimer %= 400;
+					player.position.X += 1f;
+					player.motionAnimationTimer += time.ElapsedGameTime.Milliseconds;
+					player.motionAnimationTimer %= 400;
 				}
 				return false;
 			}
@@ -1386,11 +1389,13 @@ namespace MultiPlayerPrairie
 			}
 
 			//TODO tick really here?
-			player1.Tick(time);
-			player2.Tick(time);
+			foreach(BasePlayer p in playerList.Values)
+            {
+				p.Tick(time);
+            }
 
 			//Dont stop if the player is still holding up the item?
-			if (player1.IsHoldingItem()) return false;
+			if (player.IsHoldingItem()) return false;
 
 			
 			//Screen flash timer
@@ -1409,12 +1414,12 @@ namespace MultiPlayerPrairie
 				}
 				if (playerJumped)
 				{
-					player1.position.Y += 3f;
+					player.position.Y += 3f;
 				}
-				if (Math.Abs(player1.position.Y - (float)(gopherTrainPosition - TileSize)) <= 16f)
+				if (Math.Abs(player.position.Y - (float)(gopherTrainPosition - TileSize)) <= 16f)
 				{
 					playerJumped = true;
-					player1.position.Y = gopherTrainPosition - TileSize;
+					player.position.Y = gopherTrainPosition - TileSize;
 				}
 				if (gopherTrainPosition > 16 * TileSize + TileSize)
 				{
@@ -1422,10 +1427,10 @@ namespace MultiPlayerPrairie
 					playerJumped = false;
 					whichWave++;
 					map = MapLoader.GetMap(whichWave);
-					player1.position = new Vector2(8 * TileSize, 8 * TileSize);
+					player.position = new Vector2(8 * TileSize, 8 * TileSize);
 
 					//NET Player Move
-					NETmovePlayer(player1.position);
+					NETmovePlayer(player.position);
 
 					world = ((world != MAP_TYPE.desert) ? MAP_TYPE.graveyard : MAP_TYPE.woods);
 					waveTimer = 80000;
@@ -1437,7 +1442,7 @@ namespace MultiPlayerPrairie
 			}
 
 			// Shopping lady moving to her place
-			if ((shopping || merchantArriving || waitingForPlayerToMoveDownAMap) && !player1.IsHoldingItem())
+			if ((shopping || merchantArriving || waitingForPlayerToMoveDownAMap) && !player.IsHoldingItem())
 			{
 				int oldTimer = shoppingTimer;
 				shoppingTimer += time.ElapsedGameTime.Milliseconds;
@@ -1453,25 +1458,18 @@ namespace MultiPlayerPrairie
 			{
 				newMapPosition -= TileSize / 8;
 
-				player1.position.Y -= (float)TileSize / 8;
-				player1.position.Y += 3f;
-				player1.boundingBox.X = (int)player1.position.X + TileSize / 4;
-				player1.boundingBox.Y = (int)player1.position.Y + TileSize / 4;
-				player1.boundingBox.Width = TileSize / 2;
-				player1.boundingBox.Height = TileSize / 2;
-				player1.movementDirections = new List<int>{2};
-				player1.motionAnimationTimer += time.ElapsedGameTime.Milliseconds;
-				player1.motionAnimationTimer %= 400;
-
-				player2.position.Y -= (float)TileSize / 8;
-				player2.position.Y += 3f;
-				player2.boundingBox.X = (int)player1.position.X + TileSize / 4;
-				player2.boundingBox.Y = (int)player1.position.Y + TileSize / 4;
-				player2.boundingBox.Width = TileSize / 2;
-				player2.boundingBox.Height = TileSize / 2;
-				player2.movementDirections = new List<int> { 2 };
-				player2.motionAnimationTimer += time.ElapsedGameTime.Milliseconds;
-				player2.motionAnimationTimer %= 400;
+				foreach (BasePlayer p in playerList.Values)
+				{
+					p.position.Y -= (float)TileSize / 8;
+					p.position.Y += 3f;
+					p.boundingBox.X = (int)player.position.X + TileSize / 4;
+					p.boundingBox.Y = (int)player.position.Y + TileSize / 4;
+					p.boundingBox.Width = TileSize / 2;
+					p.boundingBox.Height = TileSize / 2;
+					p.movementDirections = new List<int> { 2 };
+					p.motionAnimationTimer += time.ElapsedGameTime.Milliseconds;
+					p.motionAnimationTimer %= 400;
+				}
 
 				//Swap to the next map once the map is loaded
 				if (newMapPosition <= 0)
@@ -1482,7 +1480,7 @@ namespace MultiPlayerPrairie
 					shopping = false;
 					betweenWaveTimer = 5000;
 					waitingForPlayerToMoveDownAMap = false;
-					player1.movementDirections.Clear();
+					player.movementDirections.Clear();
 					ApplyLevelSpecificStates();
 				}
 			}
@@ -1520,21 +1518,21 @@ namespace MultiPlayerPrairie
 			{
 				for (int i = powerups.Count - 1; i >= 0; i--)
 				{
-					if (Utility.distance(player1.boundingBox.Center.X, powerups[i].position.X + TileSize / 2, player1.boundingBox.Center.Y, powerups[i].position.Y + TileSize / 2) <= (float)(TileSize + 3) && (powerups[i].position.X < TileSize || powerups[i].position.X >= 16 * TileSize - TileSize || powerups[i].position.Y < TileSize || powerups[i].position.Y >= 16 * TileSize - TileSize))
+					if (Utility.distance(player.boundingBox.Center.X, powerups[i].position.X + TileSize / 2, player.boundingBox.Center.Y, powerups[i].position.Y + TileSize / 2) <= (float)(TileSize + 3) && (powerups[i].position.X < TileSize || powerups[i].position.X >= 16 * TileSize - TileSize || powerups[i].position.Y < TileSize || powerups[i].position.Y >= 16 * TileSize - TileSize))
 					{
-						if (powerups[i].position.X + TileSize / 2 < player1.boundingBox.Center.X)
+						if (powerups[i].position.X + TileSize / 2 < player.boundingBox.Center.X)
 						{
 							powerups[i].position.X++;
 						}
-						if (powerups[i].position.X + TileSize / 2 > player1.boundingBox.Center.X)
+						if (powerups[i].position.X + TileSize / 2 > player.boundingBox.Center.X)
 						{
 							powerups[i].position.X--;
 						}
-						if (powerups[i].position.Y + TileSize / 2 < player1.boundingBox.Center.Y)
+						if (powerups[i].position.Y + TileSize / 2 < player.boundingBox.Center.Y)
 						{
 							powerups[i].position.Y++;
 						}
-						if (powerups[i].position.Y + TileSize / 2 > player1.boundingBox.Center.Y)
+						if (powerups[i].position.Y + TileSize / 2 > player.boundingBox.Center.Y)
 						{
 							powerups[i].position.Y--;
 						}
@@ -1558,11 +1556,19 @@ namespace MultiPlayerPrairie
 				if (waitingForPlayerToMoveDownAMap && isHost)
 				{
 					float bottomBorder = 16 * TileSize - TileSize / 2;
-					if (player1.boundingBox.Bottom >= bottomBorder && player2.boundingBox.Bottom >= bottomBorder)
-					{
-						PK_StartLevelTransition message = new();
-						modInstance.Helper.Multiplayer.SendMessage(message, "PK_StartLevelTransition");
+					bool readyToRumble = true;
+					foreach(BasePlayer p in playerList.Values)
+                    {
+						if (p.boundingBox.Bottom < bottomBorder)
+						{
+							readyToRumble = false;
+						}
+					}
 
+					if(readyToRumble)
+                    {
+						PK_StartLevelTransition message = new();
+						modInstance.Helper.Multiplayer.SendMessage(message, "PK_StartLevelTransition"); 
 						StartLevelTransition();
 					}
 				}
@@ -1589,19 +1595,20 @@ namespace MultiPlayerPrairie
 					{
 						for (int i = storeItems.Count - 1; i >= 0; i--)
 						{
-							if (!player1.boundingBox.Intersects(shoppingCarpetNoPickup) && player1.boundingBox.Intersects(storeItems.ElementAt(i).Key) && Coins >= GetPriceForItem(storeItems.ElementAt(i).Value))
+							if (!player.boundingBox.Intersects(shoppingCarpetNoPickup) && player.boundingBox.Intersects(storeItems.ElementAt(i).Key) && Coins >= GetPriceForItem(storeItems.ElementAt(i).Value))
 							{
 								Game1.playSound("Cowboy_Secret");
 								motionPause = 2500;
 								ITEM_TYPE boughtItem = storeItems.ElementAt(i).Value;
 								Coins -= GetPriceForItem(boughtItem);
 
-								player1.HoldItem(boughtItem, 2500);
+								player.HoldItem(boughtItem, 2500);
 
 								merchantArriving = false;
 								merchantShopOpen = false;
 
 								PK_BuyItem message = new();
+								message.playerId = modInstance.playerID.Value;
 								message.type = (int)boughtItem;
 								modInstance.Helper.Multiplayer.SendMessage(message, "PK_BuyItem");
 
@@ -1610,17 +1617,17 @@ namespace MultiPlayerPrairie
 									case ITEM_TYPE.AMMO1:
 									case ITEM_TYPE.AMMO2:
 									case ITEM_TYPE.AMMO3:
-										player1.ammoLevel++;
-										player1.bulletDamage++;
+										player.ammoLevel++;
+										player.bulletDamage++;
 										break;
 									case ITEM_TYPE.FIRESPEED1:
 									case ITEM_TYPE.FIRESPEED2:
 									case ITEM_TYPE.FIRESPEED3:
-										player1.fireSpeedLevel++;
+										player.fireSpeedLevel++;
 										break;
 									case ITEM_TYPE.RUNSPEED1:
 									case ITEM_TYPE.RUNSPEED2:
-										player1.runSpeedLevel++;
+										player.runSpeedLevel++;
 										break;
 									case ITEM_TYPE.LIFE:
 										lives++;
@@ -1671,15 +1678,15 @@ namespace MultiPlayerPrairie
 					Game1.musicPlayerVolume = Game1.options.musicVolumeLevel;
 					Game1.musicCategory.SetVolume(Game1.musicPlayerVolume);
 				}
-				if (player1.deathTimer > 0f)
+				if (player.deathTimer > 0f)
 				{
-					player1.deathTimer -= time.ElapsedGameTime.Milliseconds;
+					player.deathTimer -= time.ElapsedGameTime.Milliseconds;
 				}
 				if (betweenWaveTimer > 0 && monsters.Count == 0 && IsSpawnQueueEmpty() && !shopping && !waitingForPlayerToMoveDownAMap)
 				{
 					betweenWaveTimer -= time.ElapsedGameTime.Milliseconds;
 				}
-				else if (player1.deathTimer <= 0f && !waitingForPlayerToMoveDownAMap && !shopping && !shootoutLevel)
+				else if (player.deathTimer <= 0f && !waitingForPlayerToMoveDownAMap && !shopping && !shootoutLevel)
 				{
 					if (waveTimer > 0)
 					{
@@ -1705,7 +1712,7 @@ namespace MultiPlayerPrairie
 							hasGopherAppeared = true;
 							gopherBox = new Rectangle(Game1.random.Next(16 * TileSize), Game1.random.Next(16 * TileSize), TileSize, TileSize);
 							int tries2 = 0;
-							while ((IsCollidingWithMap(gopherBox) || IsCollidingWithMonster(gopherBox, null) || Math.Abs(gopherBox.X - player1.position.X) < (TileSize * 6) || Math.Abs(gopherBox.Y - player1.position.Y) < (float)(TileSize * 6) || Math.Abs(gopherBox.X - 8 * TileSize) < TileSize * 4 || Math.Abs(gopherBox.Y - 8 * TileSize) < TileSize * 4) && tries2 < 10)
+							while ((IsCollidingWithMap(gopherBox) || IsCollidingWithMonster(gopherBox, null) || Math.Abs(gopherBox.X - player.position.X) < (TileSize * 6) || Math.Abs(gopherBox.Y - player.position.Y) < (float)(TileSize * 6) || Math.Abs(gopherBox.X - 8 * TileSize) < TileSize * 4 || Math.Abs(gopherBox.Y - 8 * TileSize) < TileSize * 4) && tries2 < 10)
 							{
 								gopherBox.X = Game1.random.Next(16 * TileSize);
 								gopherBox.Y = Game1.random.Next(16 * TileSize);
@@ -1758,7 +1765,7 @@ namespace MultiPlayerPrairie
 										if (Game1.random.NextDouble() < 0.5 && !IsCollidingWithMonster(new Rectangle(x * 16 * 3, 0, 48, 48), null))
 										{
 											if (isHost)
-												monsters.Add(new Enemy(this,spawnQueue[p].First().type, new Point(x * TileSize, 0)));
+												monsters.Add(new Enemy(this,MONSTER_TYPE.spikey, new Point(x * TileSize, 0)));
 
 											spawnQueue[p][0] = new SpawnTask(spawnQueue[p][0].type, spawnQueue[p][0].Y - 1);
 											if (spawnQueue[p][0].Y <= 0)
@@ -1867,14 +1874,22 @@ namespace MultiPlayerPrairie
 				for (int i = monsters.Count - 1; i >= 0; i--)
 				{
 					// Target the closest player
-					float dist1 = (player1.position - monsters[i].position.Location.ToVector2()).LengthSquared();
-					float dist2 = (player2.position - monsters[i].position.Location.ToVector2()).LengthSquared();
+					float minimumDist = float.MaxValue;
+					Vector2 targetPosition = Vector2.Zero;
 
-					Vector2 targetPosition = dist1 <= dist2 ? player1.position : player2.position;
+					foreach(BasePlayer p in playerList.Values)
+                    {
+						float dist = (p.position - monsters[i].position.Location.ToVector2()).LengthSquared();
+						if (dist < minimumDist)
+						{
+							minimumDist = dist;
+							targetPosition = p.position;
+						}
+					}
+
 					monsters[i].Move(targetPosition, time);
 
-
-					if (i < monsters.Count && monsters[i].position.Intersects(player1.boundingBox) && !player1.IsInvincible())
+					if (i < monsters.Count && monsters[i].position.Intersects(player.boundingBox) && !player.IsInvincible())
 					{
 						if (zombieModeTimer <= 0)
 						{
@@ -2024,6 +2039,19 @@ namespace MultiPlayerPrairie
 
 		protected void ProcessInputs()
 		{
+			//Start the game after startmenu
+			if (_buttonHeldFrames[GameKeys.UsePowerup] > 0)
+			{
+				if (_buttonHeldFrames[GameKeys.UsePowerup] == 1 && onStartMenu && isHost)
+				{
+					onStartMenu = false;
+					InstantiatePlayers();
+					Game1.playSound("Pickup_Coin15");
+					PK_StartNewGame mNewGame = new();
+					modInstance.Helper.Multiplayer.SendMessage(mNewGame, "PK_StartNewGame");
+				}
+			}
+
 			if (_buttonHeldFrames[GameKeys.MoveUp] > 0)
 			{
 				if (_buttonHeldFrames[GameKeys.MoveUp] == 1 && gameOver)
@@ -2041,8 +2069,14 @@ namespace MultiPlayerPrairie
 					Game1.playSound("Cowboy_gunshot");
 				}
 			}
+			if (_buttonHeldFrames[GameKeys.Exit] == 1)
+			{
+				quit = true;
+			}
 
-			player1.ProcessInputs(_buttonHeldFrames);
+			if (onStartMenu) return;
+
+			player.ProcessInputs(_buttonHeldFrames);
 
 			if (_buttonHeldFrames[GameKeys.SelectOption] == 1 && gameOver)
 			{
@@ -2058,15 +2092,12 @@ namespace MultiPlayerPrairie
 					Game1.playSound("Pickup_Coin15");
 				}
 			}
-			if (_buttonHeldFrames[GameKeys.UsePowerup] == 1 && !gameOver && heldItem != null && player1.deathTimer <= 0f && zombieModeTimer <= 0)
+			if (_buttonHeldFrames[GameKeys.UsePowerup] == 1 && !gameOver && heldItem != null && player.deathTimer <= 0f && zombieModeTimer <= 0)
 			{
 				UsePowerup(heldItem.which);
 				heldItem = null;
 			}
-			if (_buttonHeldFrames[GameKeys.Exit] == 1)
-			{
-				quit = true;
-			}
+
 		}
 
 		public virtual void ApplyLevelSpecificStates()
@@ -2139,26 +2170,26 @@ namespace MultiPlayerPrairie
 						break;
 				}
 
-				NETspawnBullet(true, bulletSpawn, playerShootingDirection, player1.bulletDamage);
+				NETspawnBullet(true, bulletSpawn, playerShootingDirection, player.bulletDamage);
 				if (activePowerups.ContainsKey(POWERUP_TYPE.SHOTGUN) || spreadPistol)
 				{
 					switch (playerShootingDirection)
 					{
 						case 0:
-							NETspawnBullet(true, new Point(bulletSpawn.X, bulletSpawn.Y), new Point(-2, -8), player1.bulletDamage);
-							NETspawnBullet(true, new Point(bulletSpawn.X, bulletSpawn.Y), new Point(2, -8), player1.bulletDamage);
+							NETspawnBullet(true, new Point(bulletSpawn.X, bulletSpawn.Y), new Point(-2, -8), player.bulletDamage);
+							NETspawnBullet(true, new Point(bulletSpawn.X, bulletSpawn.Y), new Point(2, -8), player.bulletDamage);
 							break;
 						case 1:
-							NETspawnBullet(true, new Point(bulletSpawn.X, bulletSpawn.Y), new Point(8, -2), player1.bulletDamage);
-							NETspawnBullet(true, new Point(bulletSpawn.X, bulletSpawn.Y), new Point(8, 2), player1.bulletDamage);
+							NETspawnBullet(true, new Point(bulletSpawn.X, bulletSpawn.Y), new Point(8, -2), player.bulletDamage);
+							NETspawnBullet(true, new Point(bulletSpawn.X, bulletSpawn.Y), new Point(8, 2), player.bulletDamage);
 							break;
 						case 2:
-							NETspawnBullet(true, new Point(bulletSpawn.X, bulletSpawn.Y), new Point(-2, 8), player1.bulletDamage);
-							NETspawnBullet(true, new Point(bulletSpawn.X, bulletSpawn.Y), new Point(2, 8), player1.bulletDamage);
+							NETspawnBullet(true, new Point(bulletSpawn.X, bulletSpawn.Y), new Point(-2, 8), player.bulletDamage);
+							NETspawnBullet(true, new Point(bulletSpawn.X, bulletSpawn.Y), new Point(2, 8), player.bulletDamage);
 							break;
 						case 3:
-							NETspawnBullet(true, new Point(bulletSpawn.X, bulletSpawn.Y), new Point(-8, -2), player1.bulletDamage);
-							NETspawnBullet(true, new Point(bulletSpawn.X, bulletSpawn.Y), new Point(-8, 2), player1.bulletDamage);
+							NETspawnBullet(true, new Point(bulletSpawn.X, bulletSpawn.Y), new Point(-8, -2), player.bulletDamage);
+							NETspawnBullet(true, new Point(bulletSpawn.X, bulletSpawn.Y), new Point(-8, 2), player.bulletDamage);
 							break;
 					}
 				}
@@ -2167,39 +2198,39 @@ namespace MultiPlayerPrairie
 			{
 				bulletSpawn.X += TileSize / 2;
 				bulletSpawn.Y -= TileSize / 2;
-				NETspawnBullet(true, bulletSpawn, new Point(speed, -speed), player1.bulletDamage);
+				NETspawnBullet(true, bulletSpawn, new Point(speed, -speed), player.bulletDamage);
 				if (activePowerups.ContainsKey(POWERUP_TYPE.SHOTGUN) || spreadPistol)
 				{
 					int modifier8 = -2;
-					NETspawnBullet(true, bulletSpawn, new Point(speed + modifier8, -speed + modifier8), player1.bulletDamage);
+					NETspawnBullet(true, bulletSpawn, new Point(speed + modifier8, -speed + modifier8), player.bulletDamage);
 					modifier8 = 2;
-					NETspawnBullet(true, bulletSpawn, new Point(speed + modifier8, -speed + modifier8), player1.bulletDamage);
+					NETspawnBullet(true, bulletSpawn, new Point(speed + modifier8, -speed + modifier8), player.bulletDamage);
 				}
 			}
 			else if (directions.Contains(0) && directions.Contains(3))
 			{
 				bulletSpawn.X -= TileSize / 2;
 				bulletSpawn.Y -= TileSize / 2;
-				NETspawnBullet(true, bulletSpawn, new Point(-speed, -speed), player1.bulletDamage);
+				NETspawnBullet(true, bulletSpawn, new Point(-speed, -speed), player.bulletDamage);
 				if (activePowerups.ContainsKey(POWERUP_TYPE.SHOTGUN) || spreadPistol)
 				{
 					int modifier6 = -2;
-					NETspawnBullet(true, bulletSpawn, new Point(-speed - modifier6, -speed + modifier6), player1.bulletDamage);
+					NETspawnBullet(true, bulletSpawn, new Point(-speed - modifier6, -speed + modifier6), player.bulletDamage);
 					modifier6 = 2;
-					NETspawnBullet(true, bulletSpawn, new Point(-speed - modifier6, -speed + modifier6), player1.bulletDamage);
+					NETspawnBullet(true, bulletSpawn, new Point(-speed - modifier6, -speed + modifier6), player.bulletDamage);
 				}
 			}
 			else if (directions.Contains(2) && directions.Contains(1))
 			{
 				bulletSpawn.X += TileSize / 2;
 				bulletSpawn.Y += TileSize / 4;
-				NETspawnBullet(true, bulletSpawn, new Point(speed, speed), player1.bulletDamage);
+				NETspawnBullet(true, bulletSpawn, new Point(speed, speed), player.bulletDamage);
 				if (activePowerups.ContainsKey(POWERUP_TYPE.SHOTGUN) || spreadPistol)
 				{
 					int modifier4 = -2;
-					NETspawnBullet(true, bulletSpawn, new Point(speed - modifier4, speed + modifier4), player1.bulletDamage);
+					NETspawnBullet(true, bulletSpawn, new Point(speed - modifier4, speed + modifier4), player.bulletDamage);
 					modifier4 = 2;
-					NETspawnBullet(true, bulletSpawn, new Point(speed - modifier4, speed + modifier4), player1.bulletDamage);
+					NETspawnBullet(true, bulletSpawn, new Point(speed - modifier4, speed + modifier4), player.bulletDamage);
 				}
 			}
 			else if (directions.Contains(2) && directions.Contains(3))
@@ -2207,13 +2238,13 @@ namespace MultiPlayerPrairie
 				bulletSpawn.X -= TileSize / 2;
 				bulletSpawn.Y += TileSize / 4;
 
-				NETspawnBullet(true, bulletSpawn, new Point(-speed, speed), player1.bulletDamage);
+				NETspawnBullet(true, bulletSpawn, new Point(-speed, speed), player.bulletDamage);
 				if (activePowerups.ContainsKey(POWERUP_TYPE.SHOTGUN) || spreadPistol)
 				{
 					int modifier2 = -2;
-					NETspawnBullet(true, bulletSpawn, new Point(-speed + modifier2, speed + modifier2), player1.bulletDamage);
+					NETspawnBullet(true, bulletSpawn, new Point(-speed + modifier2, speed + modifier2), player.bulletDamage);
 					modifier2 = 2;
-					NETspawnBullet(true, bulletSpawn, new Point(-speed + modifier2, speed + modifier2), player1.bulletDamage);
+					NETspawnBullet(true, bulletSpawn, new Point(-speed + modifier2, speed + modifier2), player.bulletDamage);
 				}
 			}
 		}
@@ -2329,21 +2360,21 @@ namespace MultiPlayerPrairie
 
 			//Fill store with the next upgrade items
 			ITEM_TYPE runSpeedItem;
-			if (player1.runSpeedLevel == 0) runSpeedItem = ITEM_TYPE.RUNSPEED1;
-			else if (player1.runSpeedLevel == 1) runSpeedItem = ITEM_TYPE.RUNSPEED2;
+			if (player.runSpeedLevel == 0) runSpeedItem = ITEM_TYPE.RUNSPEED1;
+			else if (player.runSpeedLevel == 1) runSpeedItem = ITEM_TYPE.RUNSPEED2;
 			else runSpeedItem = ITEM_TYPE.LIFE;
 
 			ITEM_TYPE fireSpeedItem;
-			if (player1.fireSpeedLevel == 0) fireSpeedItem = ITEM_TYPE.FIRESPEED1;
-			else if (player1.fireSpeedLevel == 1) fireSpeedItem = ITEM_TYPE.FIRESPEED2;
-			else if (player1.fireSpeedLevel == 2) fireSpeedItem = ITEM_TYPE.FIRESPEED3;
-			else if (player1.ammoLevel >= 3 && !spreadPistol) fireSpeedItem = ITEM_TYPE.SPREADPISTOL;
+			if (player.fireSpeedLevel == 0) fireSpeedItem = ITEM_TYPE.FIRESPEED1;
+			else if (player.fireSpeedLevel == 1) fireSpeedItem = ITEM_TYPE.FIRESPEED2;
+			else if (player.fireSpeedLevel == 2) fireSpeedItem = ITEM_TYPE.FIRESPEED3;
+			else if (player.ammoLevel >= 3 && !spreadPistol) fireSpeedItem = ITEM_TYPE.SPREADPISTOL;
 			else fireSpeedItem = ITEM_TYPE.STAR;
 
 			ITEM_TYPE ammoItem;
-			if (player1.ammoLevel == 0) ammoItem = ITEM_TYPE.AMMO1;
-			else if (player1.ammoLevel == 1) ammoItem = ITEM_TYPE.AMMO2;
-			else if (player1.ammoLevel == 2) ammoItem = ITEM_TYPE.AMMO3;
+			if (player.ammoLevel == 0) ammoItem = ITEM_TYPE.AMMO1;
+			else if (player.ammoLevel == 1) ammoItem = ITEM_TYPE.AMMO2;
+			else if (player.ammoLevel == 2) ammoItem = ITEM_TYPE.AMMO3;
 			else ammoItem = ITEM_TYPE.STAR;
 
 			storeItems.Add(new Rectangle(7 * TileSize + 12, 8 * TileSize - TileSize * 2, TileSize, TileSize), runSpeedItem);
@@ -2354,10 +2385,7 @@ namespace MultiPlayerPrairie
 
 		public void receiveKeyPress(Keys k)
 		{
-			if (onStartMenu)
-			{
-				startTimer = 1;
-			}
+
 		}
 
 		public void receiveKeyRelease(Keys k)
@@ -2391,8 +2419,56 @@ namespace MultiPlayerPrairie
 			//Draw start menu
 			if (onStartMenu)
 			{
-				b.Draw(Game1.staminaRect, new Rectangle((int)topLeftScreenCoordinate.X, (int)topLeftScreenCoordinate.Y, 16 * TileSize, 16 * TileSize), Game1.staminaRect.Bounds, Color.Black, 0f, Vector2.Zero, SpriteEffects.None, 0.97f);
-				b.Draw(Game1.mouseCursors, new Vector2(Game1.viewport.Width / 2 - 3 * TileSize, topLeftScreenCoordinate.Y + (float)(5 * TileSize)), new Rectangle(128, 1744, 96, 56), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 1f);
+				b.Draw(
+					Game1.staminaRect,
+					new Rectangle((int)topLeftScreenCoordinate.X, (int)topLeftScreenCoordinate.Y, 16 * TileSize, 16 * TileSize),
+					Game1.staminaRect.Bounds,
+					Color.Black,
+					0f,
+					Vector2.Zero,
+					SpriteEffects.None,
+					0.97f
+				);
+				b.Draw(
+					startScreenTexture,
+					new Vector2(Game1.viewport.Width / 2, Game1.viewport.Height / 2),
+					new Rectangle(0, 0, 256, 256),
+					Color.White,
+					0f,
+					new Vector2(128,128),
+					3f,
+					SpriteEffects.None,
+					1f
+				);
+
+				List<Vector2> poppetjePositions = new()
+				{
+					new Vector2(65, 134),
+					new Vector2(82, 134),
+					new Vector2(159, 134),
+					new Vector2(176, 134)
+				};
+
+				for(int i=0; i<4; i++)
+                {
+					bool playerJoined = i < modInstance.playerList.Count;
+					Rectangle sourceRect;
+
+					if(playerJoined) sourceRect = new Rectangle(16 * i, 0, 16, 16);
+					else sourceRect = new Rectangle(16 * 4, 0, 16, 16);
+
+					b.Draw(
+						startScreenPoppetjesTexture,
+						topLeftScreenCoordinate + poppetjePositions[i] * 3f,
+						sourceRect,
+						playerJoined ? Color.White : new Color(255,255,255,20),
+						0f,
+						Vector2.Zero,
+						3f,
+						SpriteEffects.None,
+						1f
+					);
+				}
 			}
 
 			//Draw game over screen
@@ -2426,8 +2502,8 @@ namespace MultiPlayerPrairie
 				{
 					case 0:
 						b.Draw(Game1.staminaRect, new Rectangle((int)topLeftScreenCoordinate.X, (int)topLeftScreenCoordinate.Y, 16 * TileSize, 16 * TileSize), Game1.staminaRect.Bounds, Color.Black, 0f, Vector2.Zero, SpriteEffects.None, 0.0001f);
-						b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + player1.position + new Vector2(0f, -TileSize / 4), new Rectangle(384, 1760, 16, 16), Color.White * ((endCutsceneTimer < 2000) ? (1f * ((float)endCutsceneTimer / 2000f)) : 1f), 0f, Vector2.Zero, 3f, SpriteEffects.None, player1.position.Y / 10000f + 0.001f);
-						b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + player1.position + new Vector2(0f, -TileSize * 2 / 3) + new Vector2(0f, -TileSize / 4), new Rectangle(320 + (int)player1.GetHeldItem() * 16, 1776, 16, 16), Color.White * ((endCutsceneTimer < 2000) ? (1f * ((float)endCutsceneTimer / 2000f)) : 1f), 0f, Vector2.Zero, 3f, SpriteEffects.None, player1.position.Y / 10000f + 0.002f);
+						b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + player.position + new Vector2(0f, -TileSize / 4), new Rectangle(384, 1760, 16, 16), Color.White * ((endCutsceneTimer < 2000) ? (1f * ((float)endCutsceneTimer / 2000f)) : 1f), 0f, Vector2.Zero, 3f, SpriteEffects.None, player.position.Y / 10000f + 0.001f);
+						b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + player.position + new Vector2(0f, -TileSize * 2 / 3) + new Vector2(0f, -TileSize / 4), new Rectangle(320 + (int)player.GetHeldItem() * 16, 1776, 16, 16), Color.White * ((endCutsceneTimer < 2000) ? (1f * ((float)endCutsceneTimer / 2000f)) : 1f), 0f, Vector2.Zero, 3f, SpriteEffects.None, player.position.Y / 10000f + 0.002f);
 						break;
 					case 4:
 					case 5:
@@ -2462,9 +2538,9 @@ namespace MultiPlayerPrairie
 							b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(10 * TileSize, 8 * TileSize), new Rectangle(272 - endCutsceneTimer / 300 % 4 * 16, 1792, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 0.02f);
 							if (endCutscenePhase == 2)
 							{
-								b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + player1.position + new Vector2(4f, 13f) * 3f, new Rectangle(484, 1760 + (int)(player1.motionAnimationTimer / 100f) * 3, 8, 3), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, player1.position.Y / 10000f + 0.001f + 0.001f);
-								b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + player1.position, new Rectangle(384, 1760, 16, 13), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, player1.position.Y / 10000f + 0.002f + 0.001f);
-								b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + player1.position + new Vector2(0f, -TileSize * 2 / 3 - TileSize / 4), new Rectangle(320 + (int)player1.GetHeldItem() * 16, 1776, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, player1.position.Y / 10000f + 0.005f);
+								b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + player.position + new Vector2(4f, 13f) * 3f, new Rectangle(484, 1760 + (int)(player.motionAnimationTimer / 100f) * 3, 8, 3), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, player.position.Y / 10000f + 0.001f + 0.001f);
+								b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + player.position, new Rectangle(384, 1760, 16, 13), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, player.position.Y / 10000f + 0.002f + 0.001f);
+								b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + player.position + new Vector2(0f, -TileSize * 2 / 3 - TileSize / 4), new Rectangle(320 + (int)player.GetHeldItem() * 16, 1776, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, player.position.Y / 10000f + 0.005f);
 							}
 							b.Draw(Game1.staminaRect, new Rectangle((int)topLeftScreenCoordinate.X, (int)topLeftScreenCoordinate.Y, 16 * TileSize, 16 * TileSize), Game1.staminaRect.Bounds, Color.Black * ((endCutscenePhase == 1 && endCutsceneTimer > 12500) ? ((float)((endCutsceneTimer - 12500) / 3000)) : 0f), 0f, Vector2.Zero, SpriteEffects.None, 1f);
 							break;
@@ -2477,18 +2553,18 @@ namespace MultiPlayerPrairie
 				if (zombieModeTimer > 8200)
 				{
 					//Draw the flashing characters
-					b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + player1.position, new Rectangle(384 + ((zombieModeTimer / 200 % 2 == 0) ? 16 : 0), 1760, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 1f);
-					b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + player2.position, new Rectangle(384 + ((zombieModeTimer / 200 % 2 == 0) ? 16 : 0), 1760, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 1f);
-
-					//Draw the lighning above the players
-					for (int y = (int)(player1.position.Y - TileSize); y > -TileSize; y -= TileSize)
-					{
-						b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(player1.position.X, y), new Rectangle(368 + ((y / TileSize % 3 == 0) ? 16 : 0), 1744, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 1f);
+					foreach (BasePlayer p in playerList.Values)
+                    {
+						b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + p.position, new Rectangle(384 + ((zombieModeTimer / 200 % 2 == 0) ? 16 : 0), 1760, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 1f);
 					}
 
-					for (int y = (int)(player2.position.Y - TileSize); y > -TileSize; y -= TileSize)
-					{
-						b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(player2.position.X, y), new Rectangle(368 + ((y / TileSize % 3 == 0) ? 16 : 0), 1744, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 1f);
+					//Draw the lighning above the players
+					foreach(BasePlayer p in playerList.Values)
+                    {
+						for (int y = (int)(p.position.Y - TileSize); y > -TileSize; y -= TileSize)
+						{
+							b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(p.position.X, y), new Rectangle(368 + ((y / TileSize % 3 == 0) ? 16 : 0), 1744, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 1f);
+						}
 					}
 
 					b.End();
@@ -2541,7 +2617,7 @@ namespace MultiPlayerPrairie
 					}
 					else
 					{
-						int whichFrame = (player1.boundingBox.X - merchantBox.X > TileSize) ? 2 : ((merchantBox.X - player1.boundingBox.X > TileSize) ? 1 : 0);
+						int whichFrame = (player.boundingBox.X - merchantBox.X > TileSize) ? 2 : ((merchantBox.X - player.boundingBox.X > TileSize) ? 1 : 0);
 						b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(merchantBox.Location.X, merchantBox.Location.Y), new Rectangle(496 + whichFrame * 16, 1728, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, (float)merchantBox.Y / 10000f + 0.001f);
 						b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(merchantBox.Location.X - TileSize, merchantBox.Location.Y + TileSize), new Rectangle(529, 1744, 63, 32), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, (float)merchantBox.Y / 10000f + 0.001f);
 						foreach (KeyValuePair<Rectangle, ITEM_TYPE> v in storeItems)
@@ -2576,8 +2652,10 @@ namespace MultiPlayerPrairie
 				}
 
 				//Draw Players
-				player1.Draw(b);
-				player2.Draw(b);
+				foreach(BasePlayer p in playerList.Values)
+                {
+					p.Draw(b);
+                }
 
 				// Draw all monsters
 				foreach (Enemy monster in monsters)
@@ -2593,18 +2671,18 @@ namespace MultiPlayerPrairie
 				if (gopherTrain && gopherTrainPosition > -TileSize)
 				{
 					b.Draw(Game1.staminaRect, new Rectangle((int)topLeftScreenCoordinate.X, (int)topLeftScreenCoordinate.Y, 16 * TileSize, 16 * TileSize), Game1.staminaRect.Bounds, Color.Black, 0f, Vector2.Zero, SpriteEffects.None, 0.95f);
-					b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(player1.position.X - (float)(TileSize / 2), gopherTrainPosition), new Rectangle(384 + gopherTrainPosition / 30 % 4 * 16, 1792, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 0.96f);
-					b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(player1.position.X + (float)(TileSize / 2), gopherTrainPosition), new Rectangle(384 + gopherTrainPosition / 30 % 4 * 16, 1792, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 0.96f);
-					b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(player1.position.X, gopherTrainPosition - TileSize * 3), new Rectangle(320 + gopherTrainPosition / 30 % 4 * 16, 1792, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 0.96f);
-					b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(player1.position.X - (float)(TileSize / 2), gopherTrainPosition - TileSize), new Rectangle(400, 1728, 32, 32), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 0.97f);
-					if (player1.IsHoldingItem())
+					b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(player.position.X - (float)(TileSize / 2), gopherTrainPosition), new Rectangle(384 + gopherTrainPosition / 30 % 4 * 16, 1792, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 0.96f);
+					b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(player.position.X + (float)(TileSize / 2), gopherTrainPosition), new Rectangle(384 + gopherTrainPosition / 30 % 4 * 16, 1792, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 0.96f);
+					b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(player.position.X, gopherTrainPosition - TileSize * 3), new Rectangle(320 + gopherTrainPosition / 30 % 4 * 16, 1792, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 0.96f);
+					b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(player.position.X - (float)(TileSize / 2), gopherTrainPosition - TileSize), new Rectangle(400, 1728, 32, 32), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 0.97f);
+					if (player.IsHoldingItem())
 					{
-						b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + player1.position + new Vector2(0f, -TileSize / 4), new Rectangle(384, 1760, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 0.98f);
-						b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + player1.position + new Vector2(0f, -TileSize * 2 / 3) + new Vector2(0f, -TileSize / 4), new Rectangle(320 + (int)player1.GetHeldItem() * 16, 1776, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 0.99f);
+						b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + player.position + new Vector2(0f, -TileSize / 4), new Rectangle(384, 1760, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 0.98f);
+						b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + player.position + new Vector2(0f, -TileSize * 2 / 3) + new Vector2(0f, -TileSize / 4), new Rectangle(320 + (int)player.GetHeldItem() * 16, 1776, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 0.99f);
 					}
 					else
 					{
-						b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + player1.position + new Vector2(0f, -TileSize / 4), new Rectangle(464, 1760, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 0.98f);
+						b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + player.position + new Vector2(0f, -TileSize / 4), new Rectangle(464, 1760, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 0.98f);
 					}
 				}
 				else // Draw the user interface
@@ -2641,17 +2719,17 @@ namespace MultiPlayerPrairie
 					}
 
 					//Draw Powerup Icons
-					if (player1.bulletDamage > 1)
+					if (player.bulletDamage > 1)
 					{
-						b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(-TileSize - 3, 16 * TileSize - TileSize), new Rectangle(416 + (player1.ammoLevel - 1) * 16, 1776, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 0.5f);
+						b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(-TileSize - 3, 16 * TileSize - TileSize), new Rectangle(416 + (player.ammoLevel - 1) * 16, 1776, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 0.5f);
 					}
-					if (player1.fireSpeedLevel > 0)
+					if (player.fireSpeedLevel > 0)
 					{
-						b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(-TileSize - 3, 16 * TileSize - TileSize * 2), new Rectangle(320 + (player1.fireSpeedLevel - 1) * 16, 1776, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 0.5f);
+						b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(-TileSize - 3, 16 * TileSize - TileSize * 2), new Rectangle(320 + (player.fireSpeedLevel - 1) * 16, 1776, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 0.5f);
 					}
-					if (player1.runSpeedLevel > 0)
+					if (player.runSpeedLevel > 0)
 					{
-						b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(-TileSize - 3, 16 * TileSize - TileSize * 3), new Rectangle(368 + (player1.runSpeedLevel - 1) * 16, 1776, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 0.5f);
+						b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(-TileSize - 3, 16 * TileSize - TileSize * 3), new Rectangle(368 + (player.runSpeedLevel - 1) * 16, 1776, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 0.5f);
 					}
 					if (spreadPistol)
 					{

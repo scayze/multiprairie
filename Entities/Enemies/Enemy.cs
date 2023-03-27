@@ -53,7 +53,7 @@ namespace MultiplayerPrairieKing.Entities
 
 		public Vector2 acceleration;
 
-		private Point targetPosition;
+		public Point targetPosition;
 
 		public Enemy(GameMultiplayerPrairieKing game, MONSTER_TYPE which, Point position)
 		{
@@ -111,6 +111,14 @@ namespace MultiplayerPrairieKing.Entities
 							tries++;
 						}
 						while (gameInstance.IsCollidingWithMap(targetPosition) && tries < 10);
+
+						if(gameInstance.isHost)
+                        {
+							PK_SpikeyNewTarget message = new();
+							message.target = targetPosition;
+							message.id = id;
+							gameInstance.modInstance.Helper.Multiplayer.SendMessage(message, "PK_SpikeyNewTarget");
+						}
 						break;
 					}
 				case MONSTER_TYPE.outlaw:
@@ -293,6 +301,14 @@ namespace MultiplayerPrairieKing.Entities
 									tries2++;
 								}
 								while (gameInstance.IsCollidingWithMap(targetPosition) && tries2 < 5);
+
+								if(gameInstance.isHost)
+                                {
+									PK_SpikeyNewTarget message = new();
+									message.id = id;
+									message.target = targetPosition;
+									gameInstance.modInstance.Helper.Multiplayer.SendMessage(message, "PK_SpikeyNewTarget");
+								} 
 							}
 						}
 						else if (ticksSinceLastMovement > 20)
@@ -307,15 +323,10 @@ namespace MultiplayerPrairieKing.Entities
 							while (gameInstance.IsCollidingWithMap(targetPosition) && tries < 5);
 						}
 
-						Vector2 target2 = (!targetPosition.Equals(Point.Zero)) ? new Vector2(targetPosition.X, targetPosition.Y) : playerPosition;
-						if (target2.Equals(playerPosition))
-						{
-							double distanceToPlayer = Math.Sqrt(Math.Pow(position.X - target2.X, 2.0) - Math.Pow(position.Y - target2.Y, 2.0));
-							if (Math.Sqrt(Math.Pow(position.X - gameInstance.player2.position.X, 2.0) - Math.Pow(position.Y - gameInstance.player2.position.Y, 2.0)) < distanceToPlayer)
-							{
-								target2 = gameInstance.player2.position;
-							}
-						}
+						Vector2 target2;
+						if (targetPosition.Equals(Point.Zero)) target2 = playerPosition;
+						else target2 = new Vector2(targetPosition.X, targetPosition.Y);
+		
 						if (gameInstance.gopherRunning)
 						{
 							target2 = new Vector2(gameInstance.gopherBox.X, gameInstance.gopherBox.Y);
@@ -400,7 +411,7 @@ namespace MultiplayerPrairieKing.Entities
 								}
 							}
 						}
-						if (gameInstance.IsCollidingWithMapForMonsters(attemptedPosition) || gameInstance.IsCollidingWithMonster(attemptedPosition, this) || gameInstance.player1.deathTimer > 0f)
+						if (gameInstance.IsCollidingWithMapForMonsters(attemptedPosition) || gameInstance.IsCollidingWithMonster(attemptedPosition, this) || gameInstance.player.deathTimer > 0f)
 						{
 							break;
 						}
@@ -467,7 +478,7 @@ namespace MultiplayerPrairieKing.Entities
 						{
 							acceleration.Y -= 0.1f * accelerationMultiplyer;
 						}
-						if (!gameInstance.IsCollidingWithMonster(new Rectangle(position.X + (int)Math.Ceiling(acceleration.X), position.Y + (int)Math.Ceiling(acceleration.Y), TileSize, TileSize), this) && gameInstance.player1.deathTimer <= 0f)
+						if (!gameInstance.IsCollidingWithMonster(new Rectangle(position.X + (int)Math.Ceiling(acceleration.X), position.Y + (int)Math.Ceiling(acceleration.Y), TileSize, TileSize), this) && gameInstance.player.deathTimer <= 0f)
 						{
 							ticksSinceLastMovement = 0;
 							position.X += (int)Math.Ceiling(acceleration.X);
