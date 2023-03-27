@@ -190,36 +190,6 @@ namespace MultiPlayerPrairie
         private void OnButtonPressed(object sencer, ButtonPressedEventArgs e)
         {
 
-
-            if (e.Button == SButton.L)
-            {
-                //Cast the minigame to GameMultiplayerPrairieKing 
-                GameMultiplayerPrairieKing PK_game = (GameMultiplayerPrairieKing)Game1.currentMinigame;
-                PK_game.NETskipLevel();
-                //showArcadeDialogue();
-            }
-
-            /*
-            if (e.Button == SButton.K)
-            {
-                if (Game1.currentMinigame != null)
-                {
-                    Game1.currentMinigame.unload();
-                }
-                Game1.currentMinigame = new GameMultiplayerPrairieKing(this, true, true);
-            }
-            
-
-
-            if (e.Button == SButton.RightShoulder)
-            {
-                if (Game1.currentMinigame != null)
-                {
-                    Game1.currentMinigame.unload();
-                }
-                Game1.currentMinigame = new GameMultiplayerPrairieKing(this, false, true);
-            }
-            */
         }
 
         static public void HostDialogueSet(Farmer who, string dialogue_id)
@@ -250,7 +220,6 @@ namespace MultiPlayerPrairie
 
         public void OnModMessageReceived(object sender, ModMessageReceivedEventArgs e)
         {
-            Monitor.Log(e.Type + " event sent by " + e.FromPlayerID + " to " + Game1.player.UniqueMultiplayerID, LogLevel.Debug);
             //Handle Lobby messages
             switch (e.Type)
             {
