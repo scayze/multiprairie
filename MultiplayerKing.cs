@@ -224,50 +224,54 @@ namespace MultiPlayerPrairie
             switch (e.Type)
             {
                 case "PK_StartHosting":
-                    Monitor.Log(e.Type + " event sent by " + e.FromPlayerID + " to " + Game1.player.UniqueMultiplayerID, LogLevel.Debug);
-                    isHostAvailable = true;
-                    break;
+                    {
+                        Monitor.Log(e.Type + " event sent by " + e.FromPlayerID + " to " + Game1.player.UniqueMultiplayerID, LogLevel.Debug);
+                        isHostAvailable = true;
+                        break;
+                    }
 
                 case "PK_StopHosting":
-                    Monitor.Log(e.Type + " event sent by " + e.FromPlayerID + " to " + Game1.player.UniqueMultiplayerID, LogLevel.Debug);
-                    isHostAvailable = false;
-
-                    if (Game1.currentMinigame is GameMultiplayerPrairieKing)
                     {
-                        ((GameMultiplayerPrairieKing)Game1.currentMinigame).forceQuit();
-                        Game1.currentMinigame = null;
+                        Monitor.Log(e.Type + " event sent by " + e.FromPlayerID + " to " + Game1.player.UniqueMultiplayerID, LogLevel.Debug);
+                        isHostAvailable = false;
+
+                        if (Game1.currentMinigame is GameMultiplayerPrairieKing PK_Game)
+                        {
+                            PK_Game.forceQuit();
+                            Game1.currentMinigame = null;
+                        }
+                        break;
                     }
-                    break;
 
                 case "PK_JoinLobby":
-                    //Join Lobby is only relevant for host
-                    if (!instance.isHost.Value) break;
-
-                    
-
-                    //Add player to the lobby
-                    PK_JoinLobby mJoinLobby = e.ReadAs<PK_JoinLobby>();
-                    playerList.Add(mJoinLobby.playerId);
-
-                    //Send the new lobby information to the rest of the gang
-                    PK_LobbyInfo mLobbyInfoMessage = new();
-                    mLobbyInfoMessage.playerList = playerList;
-
-                    DIFFICULTY difficulty;
-                    if (Config.Difficulty == "Easy") difficulty = DIFFICULTY.EASY;
-                    else if (Config.Difficulty == "Normal") difficulty = DIFFICULTY.NORMAL;
-                    else if (Config.Difficulty == "Hard") difficulty = DIFFICULTY.HARD;
-                    else difficulty = DIFFICULTY.NORMAL;
-
-                    mLobbyInfoMessage.difficulty = (int)difficulty;
-                    Helper.Multiplayer.SendMessage(mLobbyInfoMessage, "PK_LobbyInfo");
-
-                    if(Game1.currentMinigame is GameMultiplayerPrairieKing)
                     {
-                        ((GameMultiplayerPrairieKing)Game1.currentMinigame).difficulty = (DIFFICULTY)mLobbyInfoMessage.difficulty;
-                    }
+                        //Join Lobby is only relevant for host
+                        if (!instance.isHost.Value) break;
 
-                    break;
+                        //Add player to the lobby
+                        PK_JoinLobby mJoinLobby = e.ReadAs<PK_JoinLobby>();
+                        playerList.Add(mJoinLobby.playerId);
+
+                        //Send the new lobby information to the rest of the gang
+                        PK_LobbyInfo mLobbyInfoMessage = new();
+                        mLobbyInfoMessage.playerList = playerList;
+
+                        DIFFICULTY difficulty;
+                        if (Config.Difficulty == "Easy") difficulty = DIFFICULTY.EASY;
+                        else if (Config.Difficulty == "Normal") difficulty = DIFFICULTY.NORMAL;
+                        else if (Config.Difficulty == "Hard") difficulty = DIFFICULTY.HARD;
+                        else difficulty = DIFFICULTY.NORMAL;
+
+                        mLobbyInfoMessage.difficulty = (int)difficulty;
+                        Helper.Multiplayer.SendMessage(mLobbyInfoMessage, "PK_LobbyInfo");
+
+                        if (Game1.currentMinigame is GameMultiplayerPrairieKing PK_Game)
+                        {
+                            PK_Game.difficulty = (DIFFICULTY)mLobbyInfoMessage.difficulty;
+                        }
+
+                        break;
+                    }
 
                 case "PK_LobbyInfo":
                     //Update playerList information

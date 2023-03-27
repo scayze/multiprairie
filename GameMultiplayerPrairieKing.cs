@@ -238,8 +238,6 @@ namespace MultiPlayerPrairie
 
 		public List<Enemy> monsters = new();
 
-		protected HashSet<Vector2> _borderTiles = new();
-
 		public Rectangle merchantBox;
 
 		public Rectangle noPickUpBox;
@@ -579,8 +577,7 @@ namespace MultiPlayerPrairie
 
 		public void Reset()
 		{
-			Rectangle r = new(0, 0, 16, 16);
-			_borderTiles = new HashSet<Vector2>(Utility.getBorderOfThisRectangle(r));
+
 			died = false;
 			topLeftScreenCoordinate = new Vector2(Game1.viewport.Width / 2 - 384, Game1.viewport.Height / 2 - 384);
 			merchantArriving = false;
@@ -1648,27 +1645,10 @@ namespace MultiPlayerPrairie
 
 				UpdateBullets(time);
 
+				//Update powerups
 				foreach (Powerup powerup in powerups)
 				{
-					Vector2 tile_position = new((powerup.position.X + TileSize / 2) / TileSize, (powerup.position.Y + TileSize / 2) / TileSize);
-					Vector2 corner_7 = new(powerup.position.X / TileSize, powerup.position.Y / TileSize);
-					Vector2 corner_6 = new((powerup.position.X + TileSize) / TileSize, powerup.position.Y / TileSize);
-					Vector2 corner_5 = new(powerup.position.X / TileSize, powerup.position.Y / TileSize);
-					Vector2 corner_4 = new(powerup.position.X / TileSize, (powerup.position.Y + 64) / TileSize);
-					if (_borderTiles.Contains(tile_position) || _borderTiles.Contains(corner_7) || _borderTiles.Contains(corner_6) || _borderTiles.Contains(corner_5) || _borderTiles.Contains(corner_4))
-					{
-						Point push_direction = default;
-						if (Math.Abs(tile_position.X - 8f) > Math.Abs(tile_position.Y - 8f))
-						{
-							push_direction.X = Math.Sign(tile_position.X - 8f);
-						}
-						else
-						{
-							push_direction.Y = Math.Sign(tile_position.Y - 8f);
-						}
-						powerup.position.X -= push_direction.X;
-						powerup.position.Y -= push_direction.Y;
-					}
+					powerup.Tick(time);
 				}
 
 				if (waveTimer > 0 && betweenWaveTimer <= 0 && zombieModeTimer <= 0 && !shootoutLevel && (overworldSong == null || !overworldSong.IsPlaying) && Game1.soundBank != null)
@@ -1765,7 +1745,7 @@ namespace MultiPlayerPrairie
 										if (Game1.random.NextDouble() < 0.5 && !IsCollidingWithMonster(new Rectangle(x * 16 * 3, 0, 48, 48), null))
 										{
 											if (isHost)
-												monsters.Add(new Enemy(this,MONSTER_TYPE.spikey, new Point(x * TileSize, 0)));
+												monsters.Add(new Enemy(this, spawnQueue[p].First().type, new Point(x * TileSize, 0)));
 
 											spawnQueue[p][0] = new SpawnTask(spawnQueue[p][0].type, spawnQueue[p][0].Y - 1);
 											if (spawnQueue[p][0].Y <= 0)
@@ -2570,6 +2550,8 @@ namespace MultiPlayerPrairie
 					b.End();
 					return;
 				}
+
+				//Draw the Map
 				for (int x = 0; x < 16; x++)
 				{
 					for (int y = 0; y < 16; y++)
@@ -2577,6 +2559,7 @@ namespace MultiPlayerPrairie
 						b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(x, y) * 16f * 3f + new Vector2(0f, newMapPosition - 16 * TileSize), new Rectangle(464 + 16 * (int)map[x, y] + ((map[x, y] == MAP_TILE.CACTUS && cactusDanceTimer > 800f) ? 16 : 0), 1680 - (int)world * 16, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 0f);
 					}
 				}
+				//Also draw the next map if transitioning between levels
 				if (scrollingMap)
 				{
 					for (int x = 0; x < 16; x++)
@@ -2586,6 +2569,7 @@ namespace MultiPlayerPrairie
 							b.Draw(Game1.mouseCursors, topLeftScreenCoordinate + new Vector2(x, y) * 16f * 3f + new Vector2(0f, newMapPosition), new Rectangle(464 + 16 * (int)nextMap[x, y] + ((nextMap[x, y] == MAP_TILE.CACTUS && cactusDanceTimer > 800f) ? 16 : 0), 1680 - (int)world * 16, 16, 16), Color.White, 0f, Vector2.Zero, 3f, SpriteEffects.None, 0f);
 						}
 					}
+					// Not quite sure?
 					b.Draw(Game1.staminaRect, new Rectangle((int)topLeftScreenCoordinate.X, -1, 16 * TileSize, (int)topLeftScreenCoordinate.Y), Game1.staminaRect.Bounds, Color.Black, 0f, Vector2.Zero, SpriteEffects.None, 1f);
 					b.Draw(Game1.staminaRect, new Rectangle((int)topLeftScreenCoordinate.X, (int)topLeftScreenCoordinate.Y + 16 * TileSize, 16 * TileSize, (int)topLeftScreenCoordinate.Y + 2), Game1.staminaRect.Bounds, Color.Black, 0f, Vector2.Zero, SpriteEffects.None, 1f);
 				}

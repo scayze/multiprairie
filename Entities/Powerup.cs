@@ -2,6 +2,8 @@
 using Microsoft.Xna.Framework.Graphics;
 using MultiPlayerPrairie;
 using StardewValley;
+using System;
+using System.Collections.Generic;
 using static MultiPlayerPrairie.GameMultiplayerPrairieKing;
 
 namespace MultiplayerPrairieKing.Entities
@@ -29,6 +31,33 @@ namespace MultiplayerPrairieKing.Entities
 			this.duration = duration;
 
 			this.id = gameInstance.modInstance.Helper.Multiplayer.GetNewID();
+		}
+
+		public void Tick(GameTime time)
+		{
+			Rectangle r = new(0, 0, 16, 16);
+			HashSet<Vector2> borderTiles = new HashSet<Vector2>(Utility.getBorderOfThisRectangle(r));
+
+			Vector2 tile_position = new((position.X + TileSize / 2) / TileSize, (position.Y + TileSize / 2) / TileSize);
+			Vector2 corner_7 = new(position.X / TileSize, position.Y / TileSize);
+			Vector2 corner_6 = new((position.X + TileSize) / TileSize, position.Y / TileSize);
+			Vector2 corner_5 = new(position.X / TileSize, position.Y / TileSize);
+			Vector2 corner_4 = new(position.X / TileSize, (position.Y + 64) / TileSize);
+			if (borderTiles.Contains(tile_position) || borderTiles.Contains(corner_7) || borderTiles.Contains(corner_6) || borderTiles.Contains(corner_5) || borderTiles.Contains(corner_4))
+			{
+				Point push_direction = default;
+				if (Math.Abs(tile_position.X - 8f) > Math.Abs(tile_position.Y - 8f))
+				{
+					push_direction.X = Math.Sign(tile_position.X - 8f);
+				}
+				else
+				{
+					push_direction.Y = Math.Sign(tile_position.Y - 8f);
+				}
+				position.X -= push_direction.X;
+				position.Y -= push_direction.Y;
+			}
+
 		}
 
 		public void Draw(SpriteBatch b)
