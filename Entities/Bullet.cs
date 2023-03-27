@@ -24,6 +24,7 @@ namespace MultiplayerPrairieKing.Entities
 
 		readonly bool isPersonal;
 
+		const int bulletSpeed = 8;
 
 		public Bullet(GameMultiplayerPrairieKing gameInstance, bool isFriendly, bool isPersonal, Point position, Point motion, int damage)
 		{
@@ -46,16 +47,16 @@ namespace MultiplayerPrairieKing.Entities
 			switch (direction)
 			{
 				case 0:
-					motion = new Point(0, -8);
+					motion = new Point(0, -bulletSpeed);
 					break;
 				case 1:
-					motion = new Point(8, 0);
+					motion = new Point(bulletSpeed, 0);
 					break;
 				case 2:
-					motion = new Point(0, 8);
+					motion = new Point(0, bulletSpeed);
 					break;
 				case 3:
-					motion = new Point(-8, 0);
+					motion = new Point(-bulletSpeed, 0);
 					break;
 			}
 			this.damage = damage;

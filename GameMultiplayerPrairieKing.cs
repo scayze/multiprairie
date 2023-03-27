@@ -128,8 +128,6 @@ namespace MultiPlayerPrairie
 
 		public const int pixelZoom = 3;
 
-		public const int bulletSpeed = 8;
-
 		public const double lootChance = 0.05;
 
 		public const double coinChance = 0.05;
