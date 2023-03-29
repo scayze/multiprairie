@@ -1,12 +1,13 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MultiPlayerPrairie;
+using MultiplayerPrairieKing.Utility;
 using StardewValley;
 using static MultiPlayerPrairie.GameMultiplayerPrairieKing;
 
 namespace MultiplayerPrairieKing.Entities
 {
-	public class Bullet
+    public class Bullet
 	{
 		public long id;
 
@@ -148,7 +149,6 @@ namespace MultiplayerPrairieKing.Entities
 				return;
 			}
 
-			//enemy bullet: else if (map[(enemyBullets[l].position.X + 6) / 16 / 3, (enemyBullets[l].position.Y + 6) / 16 / 3] == MAP_TILE.FENCE) ???
 			//Despawn if colliding with fence
 			if (gameInstance.map[position.X / 16 / 3, position.Y / 16 / 3] == MAP_TILE.FENCE)
 			{

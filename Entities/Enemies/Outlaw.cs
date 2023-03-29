@@ -2,13 +2,14 @@
 using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
 using MultiPlayerPrairie;
+using MultiplayerPrairieKing.Utility;
 using StardewValley;
 using System;
 using static MultiPlayerPrairie.GameMultiplayerPrairieKing;
 
 namespace MultiplayerPrairieKing.Entities.Enemies
 {
-	enum OUTLAW_PHASE
+    enum OUTLAW_PHASE
 	{
 		TALKING = -1,
 		HIDING = 0,
@@ -62,7 +63,7 @@ namespace MultiplayerPrairieKing.Entities.Enemies
 					b.Draw(
 						Game1.mouseCursors,
 						topLeftScreenCoordinate + new Vector2(position.X - TileSize / 2, position.Y - TileSize * 2),
-						new Rectangle(576 + ((gameInstance.whichWave > 5) ? 32 : 0), 1792, 32, 32),
+						new Rectangle(576 + ((gameInstance.currentLevel > 5) ? 32 : 0), 1792, 32, 32),
 						Color.White,
 						0f,
 						Vector2.Zero,
@@ -152,7 +153,7 @@ namespace MultiplayerPrairieKing.Entities.Enemies
 						shootTimer -= time.ElapsedGameTime.Milliseconds;
 						if (shootTimer < 0)
 						{
-							Vector2 trajectory = Utility.getVelocityTowardPoint(new Point(position.X + TileSize / 2, position.Y), playerPosition + new Vector2(TileSize / 2, TileSize / 2), 8f);
+                            Vector2 trajectory = StardewValley.Utility.getVelocityTowardPoint(new Point(position.X + TileSize / 2, position.Y), playerPosition + new Vector2(TileSize / 2, TileSize / 2), 8f);
 							if (gameInstance.isHost) gameInstance.NETspawnBullet(false, new Point(position.X + TileSize / 2, position.Y - TileSize / 2), new Point((int)trajectory.X, (int)trajectory.Y), 1);
 							shootTimer = 120;
 							Game1.playSound("Cowboy_gunshot");

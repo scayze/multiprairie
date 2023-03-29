@@ -1,7 +1,12 @@
 ﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Media;
 using MultiPlayerPrairie;
+using MultiplayerPrairieKing.Components;
+using MultiplayerPrairieKing.Utility;
 using StardewValley;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using static MultiPlayerPrairie.GameMultiplayerPrairieKing;
@@ -30,12 +35,103 @@ namespace MultiplayerPrairieKing.Entities
 		public static Texture2D texture;
 		public Vector2 textureBase;
 
-		public BasePlayer(GameMultiplayerPrairieKing game)
+		public BasePlayer(GameMultiplayerPrairieKing gameInstance)
 		{
-			this.gameInstance = game;
+			this.gameInstance = gameInstance;
 		}
 
-		protected void AddMovementDirection(int direction)
+        public virtual void UsePowerup(POWERUP_TYPE which)
+        {
+            switch (which)
+            {
+                case POWERUP_TYPE.HEART:
+                    foreach (BasePlayer p in gameInstance.playerList.Values)
+                    {
+                        p.HoldItem(ITEM_TYPE.FINISHED_GAME, 4000);
+                    }
+
+                    Game1.playSound("Cowboy_Secret");
+                    gameInstance.endCutscene = true;
+                    gameInstance.cutscene.endCutsceneTimer = 4000;
+                    gameInstance.world = 0;
+                    if (!Game1.player.hasOrWillReceiveMail("Beat_PK"))
+                    {
+                        Game1.addMailForTomorrow("Beat_PK");
+                    }
+                    break;
+
+                case POWERUP_TYPE.SKULL:
+                    gameInstance.StartGopherTrain(ITEM_TYPE.SKULL);
+                    break;
+
+                case POWERUP_TYPE.LOG:
+                    gameInstance.StartGopherTrain(ITEM_TYPE.LOG);
+                    break;
+
+                case POWERUP_TYPE.ZOMBIE:
+                    if (overworldSong != null && overworldSong.IsPlaying)
+                    {
+                        overworldSong.Stop(AudioStopOptions.Immediate);
+                    }
+                    if (zombieSong != null && zombieSong.IsPlaying)
+                    {
+                        zombieSong.Stop(AudioStopOptions.Immediate);
+                        zombieSong = null;
+                    }
+                    zombieSong = Game1.soundBank.GetCue("Cowboy_undead");
+                    zombieSong.Play();
+                    gameInstance.motionPause = 1800;
+                    gameInstance.zombieModeTimer = 10000;
+                    break;
+
+                case POWERUP_TYPE.TELEPORT:
+                    gameInstance.monsterConfusionTimer = 4000;
+                    gameInstance.temporarySprites.Add(new TemporaryAnimatedSprite("LooseSprites\\Cursors", new Rectangle(464, 1792, 16, 16), 120f, 5, 0, position + topLeftScreenCoordinate + new Vector2(TileSize / 2, TileSize / 2), flicker: false, flipped: false, 1f, 0f, Color.White, 3f, 0f, 0f, 0f, local: true));
+                    break;
+
+                case POWERUP_TYPE.LIFE:
+                    gameInstance.lives++;
+                    Game1.playSound("cowboy_powerup");
+                    break;
+
+                case POWERUP_TYPE.NUKE:
+                    Game1.playSound("cowboy_explosion");
+                    //Spawn the little explosion things yk yes
+                    for (int i = 0; i < 30; i++)
+                    {
+                        gameInstance.temporarySprites.Add(new TemporaryAnimatedSprite("LooseSprites\\Cursors", new Rectangle(464, 1792, 16, 16), 80f, 5, 0, new Vector2(Game1.random.Next(1, 16), Game1.random.Next(1, 16)) * TileSize + topLeftScreenCoordinate + new Vector2(TileSize / 2, TileSize / 2), flicker: false, flipped: false, 1f, 0f, Color.White, 3f, 0f, 0f, 0f, local: true)
+                        {
+                            delayBeforeAnimationStart = Game1.random.Next(800)
+                        });
+                    }
+
+                    if (!gameInstance.shootoutLevel)
+                    {
+                        foreach (Enemy e in gameInstance.monsters)
+                        {
+                            gameInstance.AddGuts(e.position.Location, e.type);
+                        }
+                    }
+                    break;
+
+                case POWERUP_TYPE.COIN:
+                    gameInstance.Coins++;
+                    Game1.playSound("Pickup_Coin15");
+                    break;
+
+                case POWERUP_TYPE.NICKEL:
+                    gameInstance.Coins += 5;
+                    Game1.playSound("Pickup_Coin15");
+                    Game1.playSound("Pickup_Coin15");
+                    break;
+
+                default:
+                    break;
+            }
+        }
+
+
+        protected void AddMovementDirection(int direction)
 		{
 			if (!gameInstance.gopherTrain && !movementDirections.Contains(direction))
 			{
@@ -136,7 +232,18 @@ namespace MultiplayerPrairieKing.Entities
 			}
 		}
 
-		public virtual void Die()
+        protected float GetMovementSpeed(float speed, int directions)
+        {
+            float movementSpeed = speed;
+            if (directions > 1)
+            {
+                movementSpeed = Math.Max(1, (int)Math.Sqrt(2f * (movementSpeed * movementSpeed)) / 2);
+            }
+            return movementSpeed;
+        }
+
+
+        public virtual void Die()
         {
 			deathTimer = 3000f;
 

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using Microsoft.Xna.Framework;
 using StardewModdingAPI;
 using StardewModdingAPI.Events;
 using StardewModdingAPI.Utilities;
@@ -12,6 +11,8 @@ using static MultiPlayerPrairie.GameMultiplayerPrairieKing;
 using Microsoft.Xna.Framework.Graphics;
 using BasePlayer = MultiplayerPrairieKing.Entities.BasePlayer;
 using MultiplayerPrairieKing;
+using MultiplayerPrairieKing.Components;
+using MultiplayerPrairieKing.Utility;
 
 namespace MultiPlayerPrairie
 {
@@ -64,13 +65,15 @@ namespace MultiPlayerPrairie
                         instance.isHost.Value = false;
 
                         //NET Join Lobby
-                        PK_JoinLobby mJoinLobby = new();
-                        mJoinLobby.playerId = instance.playerID.Value;
+                        PK_JoinLobby mJoinLobby = new()
+                        {
+                            playerId = instance.playerID.Value
+                        };
                         instance.Helper.Multiplayer.SendMessage(mJoinLobby, "PK_JoinLobby");
 
                         //Start Game
                         Game1.player.jotpkProgress.Value = null;
-                        Game1.currentMinigame = new GameMultiplayerPrairieKing(instance, instance.isHost.Value, true);
+                        Game1.currentMinigame = new GameMultiplayerPrairieKing(instance, instance.isHost.Value);
                         break;
                     case "HostMultiplayer":
                         //When host is available
@@ -85,7 +88,7 @@ namespace MultiPlayerPrairie
                         instance.Helper.Multiplayer.SendMessage(mStartHosting, "PK_StartHosting");
 
                         Game1.player.jotpkProgress.Value = null;
-                        Game1.currentMinigame = new GameMultiplayerPrairieKing(ModMultiPlayerPrairieKing.instance, ModMultiPlayerPrairieKing.instance.isHost.Value, true);
+                        Game1.currentMinigame = new GameMultiplayerPrairieKing(ModMultiPlayerPrairieKing.instance, ModMultiPlayerPrairieKing.instance.isHost.Value);
 
                         break;
                 }
@@ -123,8 +126,8 @@ namespace MultiPlayerPrairie
             //Load custom texture for players
             BasePlayer.texture = helper.ModContent.Load<Texture2D>("assets/poppetjes.png");
             GameMultiplayerPrairieKing.shopBubbleTexture = helper.ModContent.Load<Texture2D>("assets/shopBubble.png");
-            GameMultiplayerPrairieKing.startScreenTexture = helper.ModContent.Load<Texture2D>("assets/jotpk_start_screen.png");
-            GameMultiplayerPrairieKing.startScreenPoppetjesTexture = helper.ModContent.Load<Texture2D>("assets/poppetjes_lobby.png");
+            UI.startScreenTexture = helper.ModContent.Load<Texture2D>("assets/jotpk_start_screen.png");
+            UI.startScreenPoppetjesTexture = helper.ModContent.Load<Texture2D>("assets/poppetjes_lobby.png");
 
             //Register to events
             helper.Events.GameLoop.UpdateTicking += this.OnUpdateTick;
@@ -149,7 +152,7 @@ namespace MultiPlayerPrairie
         private void UsePowerup(string command, string[] args)
         {
             GameMultiplayerPrairieKing PK_game = (GameMultiplayerPrairieKing)Game1.currentMinigame;
-            PK_game.UsePowerup((POWERUP_TYPE)int.Parse(args[0]));
+            PK_game.player.UsePowerup((POWERUP_TYPE)int.Parse(args[0]));
         }
 
 
@@ -157,7 +160,7 @@ namespace MultiPlayerPrairie
         {
             GameMultiplayerPrairieKing PK_game = (GameMultiplayerPrairieKing)Game1.currentMinigame;
             PK_game.player.SetInvincible(int.MaxValue);
-            PK_game.UsePowerup(POWERUP_TYPE.SHERRIFF);
+            PK_game.player.UsePowerup(POWERUP_TYPE.SHERRIFF);
             PK_game.activePowerups[0] = int.MaxValue;
         }
 
@@ -207,9 +210,6 @@ namespace MultiPlayerPrairie
             }
         }
 
-        /*********
-        ** Private methods
-        *********/
         /// <summary>Raised after the player presses a button on the keyboard, controller, or mouse.</summary>
         /// <param name="sender">The event sender.</param>
         /// <param name="e">The event data.</param>
@@ -253,8 +253,10 @@ namespace MultiPlayerPrairie
                         playerList.Add(mJoinLobby.playerId);
 
                         //Send the new lobby information to the rest of the gang
-                        PK_LobbyInfo mLobbyInfoMessage = new();
-                        mLobbyInfoMessage.playerList = playerList;
+                        PK_LobbyInfo mLobbyInfoMessage = new()
+                        {
+                            playerList = playerList
+                        };
 
                         DIFFICULTY difficulty;
                         if (Config.Difficulty == "Easy") difficulty = DIFFICULTY.EASY;
@@ -274,16 +276,17 @@ namespace MultiPlayerPrairie
                     }
 
                 case "PK_LobbyInfo":
-                    //Update playerList information
-                    PK_LobbyInfo mLobbyInfo = e.ReadAs<PK_LobbyInfo>();
-                    playerList = mLobbyInfo.playerList;
-
-                    if (Game1.currentMinigame is GameMultiplayerPrairieKing)
                     {
-                        GameMultiplayerPrairieKing currentGame = (GameMultiplayerPrairieKing)Game1.currentMinigame;
-                        currentGame.difficulty = (DIFFICULTY)mLobbyInfo.difficulty;
+                        //Update playerList information
+                        PK_LobbyInfo mLobbyInfo = e.ReadAs<PK_LobbyInfo>();
+                        playerList = mLobbyInfo.playerList;
+
+                        if (Game1.currentMinigame is GameMultiplayerPrairieKing PK_Game)
+                        {
+                            PK_Game.difficulty = (DIFFICULTY)mLobbyInfo.difficulty;
+                        }
+                        break;
                     }
-                    break;
             }
             //Throw away the events if player isnt playing the game
             if (Game1.currentMinigame == null)
@@ -301,8 +304,10 @@ namespace MultiPlayerPrairie
                     PK_PowerupSpawn mPowerupSpawn = e.ReadAs<PK_PowerupSpawn>();
                     POWERUP_TYPE powerupType = (POWERUP_TYPE)mPowerupSpawn.which;
 
-                    Powerup powerupSpawn = new(PK_game, powerupType, mPowerupSpawn.position, mPowerupSpawn.duration);
-                    powerupSpawn.id = mPowerupSpawn.id;
+                    Powerup powerupSpawn = new(PK_game, powerupType, mPowerupSpawn.position, mPowerupSpawn.duration)
+                    {
+                        id = mPowerupSpawn.id
+                    };
                     PK_game.powerups.Add(powerupSpawn);
 
                     Monitor.Log(e.Type + " event, spawning " + powerupType.ToString() + " with id " +powerupSpawn.id, LogLevel.Debug);
@@ -323,7 +328,7 @@ namespace MultiPlayerPrairie
 
                 case "PK_UsePowerup":
                     PK_UsePowerup mPowerupUse = e.ReadAs<PK_UsePowerup>();
-                    PK_game.UsePowerup((POWERUP_TYPE)mPowerupUse.type, mPowerupUse.playerId);
+                    PK_game.playerList[mPowerupUse.playerId].UsePowerup((POWERUP_TYPE)mPowerupUse.type);
                     break;
 
                 case "PK_BuyItem":
@@ -354,8 +359,10 @@ namespace MultiPlayerPrairie
 
                 case "PK_BulletSpawn":
                     PK_BulletSpawn mBulletSpawn = e.ReadAs<PK_BulletSpawn>();
-                    Bullet bullet = new(PK_game, mBulletSpawn.isFriendly, false, mBulletSpawn.position, mBulletSpawn.motion, mBulletSpawn.damage);
-                    bullet.id = mBulletSpawn.id;
+                    Bullet bullet = new(PK_game, mBulletSpawn.isFriendly, false, mBulletSpawn.position, mBulletSpawn.motion, mBulletSpawn.damage)
+                    {
+                        id = mBulletSpawn.id
+                    };
                     PK_game.bullets.Add(bullet);
                     break;
 
@@ -390,20 +397,26 @@ namespace MultiPlayerPrairie
 
                     if (mEnemySpawn.which == (int)MONSTER_TYPE.outlaw)
                     {
-                        Outlaw outlaw = new(PK_game, mEnemySpawn.position);
-                        outlaw.id = mEnemySpawn.id;
+                        Outlaw outlaw = new(PK_game, mEnemySpawn.position)
+                        {
+                            id = mEnemySpawn.id
+                        };
                         PK_game.monsters.Add(outlaw);
                     }
                     else if (mEnemySpawn.which == (int)MONSTER_TYPE.dracula)
                     {
-                        Dracula dracula = new(PK_game);
-                        dracula.id = mEnemySpawn.id;
+                        Dracula dracula = new(PK_game)
+                        {
+                            id = mEnemySpawn.id
+                        };
                         PK_game.monsters.Add(dracula);
                     }
                     else
                     {
-                        Enemy cowbyMonster = new(PK_game, monsterType, mEnemySpawn.position);
-                        cowbyMonster.id = mEnemySpawn.id;
+                        Enemy cowbyMonster = new(PK_game, monsterType, mEnemySpawn.position)
+                        {
+                            id = mEnemySpawn.id
+                        };
                         PK_game.monsters.Add(cowbyMonster);
                     }
                     break;
@@ -466,7 +479,7 @@ namespace MultiPlayerPrairie
                     break;
 
                 case "PK_StartNewGame":
-                    PK_game.onStartMenu = false;
+                    PK_game.ui.onStartMenu = false;
                     PK_game.InstantiatePlayers();
                     Game1.playSound("Pickup_Coin15");
                     break;
@@ -499,148 +512,5 @@ namespace MultiPlayerPrairie
             }
 
         }
-    }
-
-
-    //PowerupSync
-    public class PK_PowerupSpawn
-    {
-        public long id = -69;
-        public int which = -69;
-        public Point position;
-        public int duration;
-    }
-    public class PK_PowerupPickup
-    {
-        public long id = -1;
-        public int which = -69;
-        public int type = -69;
-    }
-
-    public class PK_UsePowerup
-    {
-        public int type = -69;
-        public long playerId = -1;
-    }
-
-    public class PK_BuyItem
-    {
-        public int type = -69;
-        public long playerId = -1;
-        //TODO: player ID for multiple players?
-    }
-
-    //Player Sync
-    public class PK_PlayerMove
-    {
-        public long id = -69;
-        public Vector2 position = Vector2.Zero;
-        public Vector2 motion = Vector2.Zero;
-        public List<int> shootingDirections;
-        public List<int> movementDirections;
-        public long playerId = -1;
-    }
-
-    public class PK_PlayerDeath
-    {
-        public long id = -69;
-    }
-
-
-    //Bullet Sync
-    public class PK_BulletSpawn
-    {
-        public long id = -69;
-        public bool isFriendly = true;
-        public Point position = Point.Zero;
-        public Point motion = Point.Zero;
-        public int damage = 1;
-    }
-
-    public class PK_BulletDespawned
-    {
-        public long id = -69;
-
-        public long monsterId = -69;
-        public int damage;
-    }
-
-
-    //Enemy sync
-    public class PK_EnemySpawn
-    {
-        public Point position = Point.Zero;
-        public long id = -69;
-        public int which = 0;
-    }
-
-    public class PK_EnemyKilled
-    {
-        public long dick = 69; //Haha
-        public long id = -69;
-    }
-
-    public class PK_SpikeyTransform
-    {
-        public long id = -69;
-    }
-
-    public class PK_SpikeyNewTarget
-    {
-        public long id = -69;
-        public Point target;
-    }
-
-    public class PK_EnemyPositions
-    {
-        public Dictionary<long, Point> positions;
-    }
-
-    //Level Sync
-    public class PK_CompleteLevel
-    {
-        public int toLevel = -1;
-    }
-
-    public class PK_ExitGame
-    {
-
-    }
-
-    public class PK_StartLevelTransition
-    {
-
-    }
-
-    public class PK_StartNewGamePlus
-    {
-
-    }
-
-    public class PK_StartNewGame
-    {
-
-    }
-
-    //Basic Lobby messages
-    public class PK_StartHosting
-    {
-
-    }
-
-    public class PK_StopHosting
-    {
-
-    }
-
-    public class PK_JoinLobby
-    {
-        public long playerId = -1;
-    }
-
-    public class PK_LobbyInfo
-    {
-        public List<long> playerList;
-        public int difficulty = (int)DIFFICULTY.NORMAL;
     }
 }

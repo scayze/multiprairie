@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
 using MultiPlayerPrairie;
+using MultiplayerPrairieKing.Utility;
 using StardewValley;
 using System;
 using System.Collections.Generic;
@@ -12,7 +13,7 @@ using static MultiPlayerPrairie.GameMultiplayerPrairieKing;
 
 namespace MultiplayerPrairieKing.Entities.Enemies
 {
-	enum DRACULA_PHASE
+    enum DRACULA_PHASE
     {
 		GLOATING_PHASE = -1,
 		RANDOM_SHOOT = 0,
@@ -240,17 +241,17 @@ namespace MultiplayerPrairieKing.Entities.Enemies
 						}
 						attemptedPosition.X = position.X - (attemptedPosition.X - position.X);
 						attemptedPosition.Y = position.Y - (attemptedPosition.Y - position.Y);
-						if (!gameInstance.IsCollidingWithMapForMonsters(attemptedPosition) && !gameInstance.IsCollidingWithMonster(attemptedPosition, this))
+						if (!gameInstance.map.IsCollidingWithMapForMonsters(attemptedPosition) && !gameInstance.map.IsCollidingWithMonster(attemptedPosition, this))
 						{
 							position = attemptedPosition;
 						}
 						shootTimer -= time.ElapsedGameTime.Milliseconds;
 						if (shootTimer < 0)
 						{
-							Vector2 trajectory = Utility.getVelocityTowardPoint(new Point(position.X + TileSize / 2, position.Y), playerPosition + new Vector2(TileSize / 2, TileSize / 2), 8f);
+                            Vector2 trajectory = StardewValley.Utility.getVelocityTowardPoint(new Point(position.X + TileSize / 2, position.Y), playerPosition + new Vector2(TileSize / 2, TileSize / 2), 8f);
 							if (gameInstance.player.movementDirections.Count > 0)
 							{
-								trajectory = Utility.getTranslatedVector2(trajectory, gameInstance.player.movementDirections.Last(), 3f);
+								trajectory = StardewValley.Utility.getTranslatedVector2(trajectory, gameInstance.player.movementDirections.Last(), 3f);
 							}
 							if (gameInstance.isHost) gameInstance.NETspawnBullet(false, new Point(position.X + TileSize / 2, position.Y + TileSize / 2), new Point((int)trajectory.X, (int)trajectory.Y), 1);
 							shootTimer = 250;
@@ -356,7 +357,7 @@ namespace MultiplayerPrairieKing.Entities.Enemies
 							phaseInternalTimer = 2000;
 							shootTimer = 200;
 							phaseInternalCounter++;
-							Vector2 trajectory3 = Utility.getVelocityTowardPoint(new Point(position.X + TileSize / 2, position.Y), playerPosition + new Vector2(TileSize / 2, TileSize / 2), 8f);
+                            Vector2 trajectory3 = StardewValley.Utility.getVelocityTowardPoint(new Point(position.X + TileSize / 2, position.Y), playerPosition + new Vector2(TileSize / 2, TileSize / 2), 8f);
 							if (gameInstance.isHost) gameInstance.NETspawnBullet(false, new Point(position.X + TileSize / 2, position.Y + TileSize / 2), new Point((int)trajectory3.X, (int)trajectory3.Y), 1);
 							Game1.playSound("Cowboy_gunshot");
 						}
@@ -370,7 +371,7 @@ namespace MultiplayerPrairieKing.Entities.Enemies
 						shootTimer -= time.ElapsedGameTime.Milliseconds;
 						if (shootTimer < 0)
 						{
-							Vector2 trajectory2 = Utility.getVelocityTowardPoint(new Point(position.X + TileSize / 2, position.Y), playerPosition + new Vector2(TileSize / 2, TileSize / 2), 8f);
+                            Vector2 trajectory2 = StardewValley.Utility.getVelocityTowardPoint(new Point(position.X + TileSize / 2, position.Y), playerPosition + new Vector2(TileSize / 2, TileSize / 2), 8f);
 							trajectory2.X += Game1.random.Next(-1, 2);
 							trajectory2.Y += Game1.random.Next(-1, 2);
 							if (gameInstance.isHost) gameInstance.NETspawnBullet(false, new Point(position.X + TileSize / 2, position.Y + TileSize / 2), new Point((int)trajectory2.X, (int)trajectory2.Y), 1);
@@ -398,17 +399,17 @@ namespace MultiplayerPrairieKing.Entities.Enemies
 
 		public void FireSpread(Point origin, double offsetAngle)
 		{
-			Vector2[] surroundingTileLocationsArray = Utility.getSurroundingTileLocationsArray(new Vector2(origin.X, origin.Y));
+            Vector2[] surroundingTileLocationsArray = StardewValley.Utility.getSurroundingTileLocationsArray(new Vector2(origin.X, origin.Y));
 			for (int i = 0; i < surroundingTileLocationsArray.Length; i++)
 			{
 				Vector2 p = surroundingTileLocationsArray[i];
-				Vector2 trajectory = Utility.getVelocityTowardPoint(origin, p, 6f);
+                Vector2 trajectory = StardewValley.Utility.getVelocityTowardPoint(origin, p, 6f);
 				if (offsetAngle > 0.0)
 				{
 					offsetAngle /= 2.0;
 					trajectory.X = (float)(Math.Cos(offsetAngle) * (p.X - origin.X) - Math.Sin(offsetAngle) * (p.Y - origin.Y) + origin.X);
 					trajectory.Y = (float)(Math.Sin(offsetAngle) * (p.X - origin.X) + Math.Cos(offsetAngle) * (p.Y - origin.Y) + origin.Y);
-					trajectory = Utility.getVelocityTowardPoint(origin, trajectory, 8f);
+					trajectory = StardewValley.Utility.getVelocityTowardPoint(origin, trajectory, 8f);
 				}
 				if (gameInstance.isHost) gameInstance.NETspawnBullet(false, origin, new Point((int)trajectory.X, (int)trajectory.Y), 1);
 			}
@@ -419,19 +420,19 @@ namespace MultiplayerPrairieKing.Entities.Enemies
 		{
 			if (gameInstance.isHost)
 			{
-				if (!gameInstance.IsCollidingWithMonster(new Rectangle(origin.X - TileSize - TileSize / 2, origin.Y, TileSize, TileSize), null))
+				if (!gameInstance.map.IsCollidingWithMonster(new Rectangle(origin.X - TileSize - TileSize / 2, origin.Y, TileSize, TileSize), null))
 				{
 					gameInstance.monsters.Add(new Enemy(gameInstance, which, new Point(origin.X - TileSize - TileSize / 2, origin.Y)));
 				}
-				if (!gameInstance.IsCollidingWithMonster(new Rectangle(origin.X + TileSize + TileSize / 2, origin.Y, TileSize, TileSize), null))
+				if (!gameInstance.map.IsCollidingWithMonster(new Rectangle(origin.X + TileSize + TileSize / 2, origin.Y, TileSize, TileSize), null))
 				{
 					gameInstance.monsters.Add(new Enemy(gameInstance, which, new Point(origin.X + TileSize + TileSize / 2, origin.Y)));
 				}
-				if (!gameInstance.IsCollidingWithMonster(new Rectangle(origin.X, origin.Y + TileSize + TileSize / 2, TileSize, TileSize), null))
+				if (!gameInstance.map.IsCollidingWithMonster(new Rectangle(origin.X, origin.Y + TileSize + TileSize / 2, TileSize, TileSize), null))
 				{
 					gameInstance.monsters.Add(new Enemy(gameInstance, which, new Point(origin.X, origin.Y + TileSize + TileSize / 2)));
 				}
-				if (!gameInstance.IsCollidingWithMonster(new Rectangle(origin.X, origin.Y - TileSize - TileSize * 3 / 4, TileSize, TileSize), null))
+				if (!gameInstance.map.IsCollidingWithMonster(new Rectangle(origin.X, origin.Y - TileSize - TileSize * 3 / 4, TileSize, TileSize), null))
 				{
 					gameInstance.monsters.Add(new Enemy(gameInstance, which, new Point(origin.X, origin.Y - TileSize - TileSize * 3 / 4)));
 				}

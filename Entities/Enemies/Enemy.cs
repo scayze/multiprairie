@@ -1,6 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MultiPlayerPrairie;
+using MultiplayerPrairieKing.Utility;
 using StardewValley;
 using System;
 using System.Collections.Generic;
@@ -11,11 +12,15 @@ using static MultiPlayerPrairie.GameMultiplayerPrairieKing;
 
 namespace MultiplayerPrairieKing.Entities
 {
-	public class Enemy
+    public class Enemy
 	{
 		protected GameMultiplayerPrairieKing gameInstance;
 
 		public long id;
+
+		const double lootChance = 0.05;
+
+		const double coinChance = 0.05;
 
 		public const int MonsterAnimationDelay = 500;
 
@@ -54,6 +59,8 @@ namespace MultiplayerPrairieKing.Entities
 		public Vector2 acceleration;
 
 		public Point targetPosition;
+
+
 
 		public Enemy(GameMultiplayerPrairieKing game, MONSTER_TYPE which, Point position)
 		{
@@ -110,7 +117,7 @@ namespace MultiplayerPrairieKing.Entities
 							targetPosition = new Point(Game1.random.Next(2, 14) * TileSize, Game1.random.Next(2, 14) * TileSize);
 							tries++;
 						}
-						while (gameInstance.IsCollidingWithMap(targetPosition) && tries < 10);
+						while (gameInstance.map.IsCollidingWithMap(targetPosition) && tries < 10);
 
 						if(gameInstance.isHost)
                         {
@@ -127,30 +134,36 @@ namespace MultiplayerPrairieKing.Entities
 			}
 			oppositeMotionGuy = (Game1.random.NextDouble() < 0.5);
 
+			//Add bonus health in newGamePlus
 			if (gameInstance.newGamePlus > 0)
 			{
 				health += gameInstance.newGamePlus * 2;
 			}
 
+			//Add a health multiplier for each additional player, depending on difficulty
 			if(gameInstance.difficulty == DIFFICULTY.NORMAL)
             {
-				health = (int)Math.Ceiling((float)health*1.5);
+				float newHealth = health + health * (0.6f * gameInstance.playerList.Count - 1);
+                health = (int)Math.Ceiling(newHealth);
 			}
 			else if(gameInstance.difficulty == DIFFICULTY.HARD)
             {
-				health = (int)Math.Ceiling((float)health * 2);
+                float newHealth = health + health * (1f * gameInstance.playerList.Count - 1);
+                health = (int)Math.Ceiling(newHealth);
 			}
 			
-			//NET spawn outlaw
+			//NET spawn enemy
 			if (gameInstance.isHost)
 			{
 				id = gameInstance.modInstance.Helper.Multiplayer.GetNewID();
 
-				PK_EnemySpawn message = new();
-				message.id = id;
-				message.which = (int)which;
-				message.position = position;
-				game.modInstance.Helper.Multiplayer.SendMessage(message, "PK_EnemySpawn");
+                PK_EnemySpawn message = new()
+                {
+                    id = id,
+                    which = (int)which,
+                    position = position
+                };
+                game.modInstance.Helper.Multiplayer.SendMessage(message, "PK_EnemySpawn");
 			}
 		}
 
@@ -216,7 +229,7 @@ namespace MultiplayerPrairieKing.Entities
 			}
 
 			//Chances
-			if (Game1.random.NextDouble() < 0.05)
+			if (Game1.random.NextDouble() < coinChance)
 			{
 				if (type != MONSTER_TYPE.orc && Game1.random.NextDouble() < 0.1)
 				{
@@ -228,7 +241,7 @@ namespace MultiplayerPrairieKing.Entities
 				}
 				return POWERUP_TYPE.COIN;
 			}
-			if (Game1.random.NextDouble() < 0.05)
+			if (Game1.random.NextDouble() < lootChance)
 			{
 				if (Game1.random.NextDouble() < 0.15)
 				{
@@ -266,7 +279,7 @@ namespace MultiplayerPrairieKing.Entities
 			movementAnimationTimer -= time.ElapsedGameTime.Milliseconds;
 			if (movementAnimationTimer <= 0f)
 			{
-				movementAnimationTimer = Math.Max(100, 500 - speed * 50);
+				movementAnimationTimer = Math.Max(100, MonsterAnimationDelay - speed * 50);
 			}
 			if (flashColorTimer > 0f)
 			{
@@ -300,7 +313,7 @@ namespace MultiplayerPrairieKing.Entities
 									targetPosition = new Point(Game1.random.Next(2, 14) * TileSize, Game1.random.Next(2, 14) * TileSize);
 									tries2++;
 								}
-								while (gameInstance.IsCollidingWithMap(targetPosition) && tries2 < 5);
+								while (gameInstance.map.IsCollidingWithMap(targetPosition) && tries2 < 5);
 
 								if(gameInstance.isHost)
                                 {
@@ -320,7 +333,7 @@ namespace MultiplayerPrairieKing.Entities
 								targetPosition = new Point(Game1.random.Next(position.X - TileSize * 2, position.X + TileSize * 2), Game1.random.Next(position.Y - TileSize * 2, position.Y + TileSize * 2));
 								tries++;
 							}
-							while (gameInstance.IsCollidingWithMap(targetPosition) && tries < 5);
+							while (gameInstance.map.IsCollidingWithMap(targetPosition) && tries < 5);
 						}
 
 						Vector2 target2;
@@ -400,10 +413,12 @@ namespace MultiplayerPrairieKing.Entities
 							{
 								if (gameInstance.monsters[i].type == MONSTER_TYPE.spikey && gameInstance.monsters[i].special && gameInstance.monsters[i].position.Intersects(attemptedPosition))
 								{
-									//Net EnemyKilled
-									PK_EnemyKilled message = new();
-									message.id = gameInstance.monsters[i].id;
-									gameInstance.modInstance.Helper.Multiplayer.SendMessage(message, "PK_EnemyKilled");
+                                    //Net EnemyKilled
+                                    PK_EnemyKilled message = new()
+                                    {
+                                        id = gameInstance.monsters[i].id
+                                    };
+                                    gameInstance.modInstance.Helper.Multiplayer.SendMessage(message, "PK_EnemyKilled");
 
 									gameInstance.AddGuts(gameInstance.monsters[i].position.Location, gameInstance.monsters[i].type);
 									Game1.playSound("Cowboy_monsterDie");
@@ -411,7 +426,7 @@ namespace MultiplayerPrairieKing.Entities
 								}
 							}
 						}
-						if (gameInstance.IsCollidingWithMapForMonsters(attemptedPosition) || gameInstance.IsCollidingWithMonster(attemptedPosition, this) || gameInstance.player.deathTimer > 0f)
+						if (gameInstance.map.IsCollidingWithMapForMonsters(attemptedPosition) || gameInstance.map.IsCollidingWithMonster(attemptedPosition, this) || gameInstance.player.deathTimer > 0f)
 						{
 							break;
 						}
@@ -456,11 +471,11 @@ namespace MultiplayerPrairieKing.Entities
 								targetPosition = new Point(Game1.random.Next(position.X - TileSize * 2, position.X + TileSize * 2), Game1.random.Next(position.Y - TileSize * 2, position.Y + TileSize * 2));
 								tries3++;
 							}
-							while (gameInstance.IsCollidingWithMap(targetPosition) && tries3 < 5);
+							while (gameInstance.map.IsCollidingWithMap(targetPosition) && tries3 < 5);
 						}
 						_ = targetPosition;
 						Vector2 target2 = (!targetPosition.Equals(Point.Zero)) ? new Vector2(targetPosition.X, targetPosition.Y) : playerPosition;
-						Vector2 targetToFly = Utility.getVelocityTowardPoint(position.Location, target2 + new Vector2(TileSize / 2, TileSize / 2), speed);
+                        Vector2 targetToFly = StardewValley.Utility.getVelocityTowardPoint(position.Location, target2 + new Vector2(TileSize / 2, TileSize / 2), speed);
 						float accelerationMultiplyer = (targetToFly.X != 0f && targetToFly.Y != 0f) ? 1.5f : 1f;
 						if (targetToFly.X > acceleration.X)
 						{
@@ -478,7 +493,7 @@ namespace MultiplayerPrairieKing.Entities
 						{
 							acceleration.Y -= 0.1f * accelerationMultiplyer;
 						}
-						if (!gameInstance.IsCollidingWithMonster(new Rectangle(position.X + (int)Math.Ceiling(acceleration.X), position.Y + (int)Math.Ceiling(acceleration.Y), TileSize, TileSize), this) && gameInstance.player.deathTimer <= 0f)
+						if (!gameInstance.map.IsCollidingWithMonster(new Rectangle(position.X + (int)Math.Ceiling(acceleration.X), position.Y + (int)Math.Ceiling(acceleration.Y), TileSize, TileSize), this) && gameInstance.player.deathTimer <= 0f)
 						{
 							ticksSinceLastMovement = 0;
 							position.X += (int)Math.Ceiling(acceleration.X);
@@ -515,9 +530,9 @@ namespace MultiplayerPrairieKing.Entities
 				//Spawn Pickup if host
 				POWERUP_TYPE loot = GetLootDrop();
 
-				if (loot != POWERUP_TYPE.LOG && gameInstance.whichWave != 12)
+				if (loot != POWERUP_TYPE.LOG && gameInstance.currentLevel != 12)
 				{
-					gameInstance.NETspawnPowerup(loot, position.Location, gameInstance.lootDuration);
+					gameInstance.NETspawnPowerup(loot, position.Location);
 				}
 			}
 

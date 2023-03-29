@@ -1,6 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MultiPlayerPrairie;
+using MultiplayerPrairieKing.Utility;
 using StardewValley;
 using System;
 using System.Collections.Generic;
@@ -8,7 +9,7 @@ using static MultiPlayerPrairie.GameMultiplayerPrairieKing;
 
 namespace MultiplayerPrairieKing.Entities
 {
-	public class Powerup
+    public class Powerup
 	{
 		public GameMultiplayerPrairieKing gameInstance;
 
@@ -18,11 +19,13 @@ namespace MultiplayerPrairieKing.Entities
 
 		public Point position;
 
-		public int duration;
+		int duration;
 
 		public float yOffset;
 
-		public Powerup(GameMultiplayerPrairieKing gameInstance, POWERUP_TYPE which, Point position, int duration)
+		public bool queuedForDeletion = false;
+
+		public Powerup(GameMultiplayerPrairieKing gameInstance, POWERUP_TYPE which, Point position, int duration = 7500)
 		{
 			this.gameInstance = gameInstance;
 
@@ -35,8 +38,9 @@ namespace MultiplayerPrairieKing.Entities
 
 		public void Tick(GameTime time)
 		{
+			//Push Powerup away from border tiles
 			Rectangle r = new(0, 0, 16, 16);
-			HashSet<Vector2> borderTiles = new HashSet<Vector2>(Utility.getBorderOfThisRectangle(r));
+            HashSet<Vector2> borderTiles = new(StardewValley.Utility.getBorderOfThisRectangle(r));
 
 			Vector2 tile_position = new((position.X + TileSize / 2) / TileSize, (position.Y + TileSize / 2) / TileSize);
 			Vector2 corner_7 = new(position.X / TileSize, position.Y / TileSize);
@@ -57,6 +61,11 @@ namespace MultiplayerPrairieKing.Entities
 				position.X -= push_direction.X;
 				position.Y -= push_direction.Y;
 			}
+
+
+			//Despawn powerup after set time
+			duration -= time.ElapsedGameTime.Milliseconds;
+			if (duration < 0) queuedForDeletion = true;
 
 		}
 

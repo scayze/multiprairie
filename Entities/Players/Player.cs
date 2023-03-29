@@ -1,33 +1,198 @@
 ﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Media;
 using MultiPlayerPrairie;
+using MultiplayerPrairieKing.Components;
+using MultiplayerPrairieKing.Utility;
 using StardewModdingAPI;
 using StardewValley;
+using StardewValley.Monsters;
+using StardewValley.Tools;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using static MultiPlayerPrairie.GameMultiplayerPrairieKing;
+using static StardewValley.Polygon;
 
 namespace MultiplayerPrairieKing.Entities
 {
-	public class Player : BasePlayer
+    public class Player : BasePlayer
 	{
 		public int runSpeedLevel;
 		public int fireSpeedLevel;
 		public int ammoLevel;
 		public int bulletDamage = 1;
-
-		int shotTimer;
-		readonly int shootingDelay = 300;
-
-		
-
-		public Player(GameMultiplayerPrairieKing game) : base(game)
+		public bool spreadPistol;
+        
+        int shotTimer;
+		const int shootingDelay = 300;
+        const int powerupDuration = 10000;
+        public const float playerSpeed = 3f;
+        public Powerup heldItem;
+        public Player(GameMultiplayerPrairieKing game) : base(game)
         {
 			ammoLevel = 0;
         }
 
-		public void ProcessInputs(Dictionary<GameKeys, int> _buttonHeldFrames)
+        public bool PickupPowerup(Powerup c)
+        {
+            switch (c.which)
+            {
+                case POWERUP_TYPE.HEART:
+                    UsePowerup(POWERUP_TYPE.HEART);
+                    break;
+                case POWERUP_TYPE.SKULL:
+                    UsePowerup(POWERUP_TYPE.SKULL);
+                    break;
+                case POWERUP_TYPE.LOG:
+                    UsePowerup(POWERUP_TYPE.LOG);
+                    break;
+                case POWERUP_TYPE.COIN:
+                    UsePowerup(POWERUP_TYPE.COIN);
+                    break;
+                case POWERUP_TYPE.NICKEL:
+                    UsePowerup(POWERUP_TYPE.NICKEL);
+                    break;
+                case POWERUP_TYPE.LIFE:
+                    UsePowerup(POWERUP_TYPE.LIFE);
+                    break;
+                default:
+                    {
+                        if (heldItem == null)
+                        {
+                            heldItem = c;
+                            Game1.playSound("cowboy_powerup");
+                            break;
+                        }
+                        Powerup tmp = heldItem;
+                        heldItem = c;
+                        gameInstance.noPickUpBox.Location = c.position;
+                        tmp.position = c.position;
+                        gameInstance.powerups.Add(tmp);
+                        Game1.playSound("cowboy_powerup");
+                        return true;
+                    }
+            }
+            return true;
+        }
+
+        public override void UsePowerup(POWERUP_TYPE which)
+        {
+			base.UsePowerup(which);
+            //If not visual only (aka sync call for player 2), send network message
+            PK_UsePowerup mUsePowerup = new()
+            {
+                playerId = gameInstance.modInstance.playerID.Value,
+                type = (int)which
+            };
+            gameInstance.modInstance.Helper.Multiplayer.SendMessage(mUsePowerup, "PK_UsePowerup");
+
+
+            if (gameInstance.activePowerups.ContainsKey(which))
+            {
+                gameInstance.activePowerups[which] = powerupDuration + 2000;
+                return;
+            }
+
+            switch (which)
+            {
+                case POWERUP_TYPE.SHERRIFF:
+                    UsePowerup(POWERUP_TYPE.SHOTGUN);
+                    UsePowerup(POWERUP_TYPE.RAPIDFIRE);
+                    UsePowerup(POWERUP_TYPE.SPEED);
+                    for (int j = 0; j < gameInstance.activePowerups.Count; j++)
+                    {
+                        gameInstance.activePowerups[gameInstance.activePowerups.ElementAt(j).Key] *= 2;
+                    }
+                    break;
+                case POWERUP_TYPE.TELEPORT:
+
+                    Point teleportSpot = Point.Zero;
+                    int tries = 0;
+                    while ((Math.Abs(teleportSpot.X - position.X) < 8f || Math.Abs(teleportSpot.Y - position.Y) < 8f || gameInstance.map.IsCollidingWithMap(teleportSpot) || gameInstance.map.IsCollidingWithMonster(new Rectangle(teleportSpot.X, teleportSpot.Y, TileSize, TileSize), null)) && tries < 10)
+                    {
+                        teleportSpot = new Point(Game1.random.Next(TileSize, 16 * TileSize - TileSize), Game1.random.Next(TileSize, 16 * TileSize - TileSize));
+                        tries++;
+                    }
+
+                    gameInstance.temporarySprites.Add(new TemporaryAnimatedSprite("LooseSprites\\Cursors", new Rectangle(464, 1792, 16, 16), 120f, 5, 0, position + topLeftScreenCoordinate + new Vector2(TileSize / 2, TileSize / 2), flicker: false, flipped: false, 1f, 0f, Color.White, 3f, 0f, 0f, 0f, local: true));
+                    gameInstance.temporarySprites.Add(new TemporaryAnimatedSprite("LooseSprites\\Cursors", new Rectangle(464, 1792, 16, 16), 120f, 5, 0, new Vector2(teleportSpot.X, teleportSpot.Y) + topLeftScreenCoordinate + new Vector2(TileSize / 2, TileSize / 2), flicker: false, flipped: false, 1f, 0f, Color.White, 3f, 0f, 0f, 0f, local: true));
+                    gameInstance.temporarySprites.Add(new TemporaryAnimatedSprite("LooseSprites\\Cursors", new Rectangle(464, 1792, 16, 16), 120f, 5, 0, new Vector2(teleportSpot.X - TileSize / 2, teleportSpot.Y) + topLeftScreenCoordinate + new Vector2(TileSize / 2, TileSize / 2), flicker: false, flipped: false, 1f, 0f, Color.White, 3f, 0f, 0f, 0f, local: true)
+                    {
+                        delayBeforeAnimationStart = 200
+                    });
+                    gameInstance.temporarySprites.Add(new TemporaryAnimatedSprite("LooseSprites\\Cursors", new Rectangle(464, 1792, 16, 16), 120f, 5, 0, new Vector2(teleportSpot.X + TileSize / 2, teleportSpot.Y) + topLeftScreenCoordinate + new Vector2(TileSize / 2, TileSize / 2), flicker: false, flipped: false, 1f, 0f, Color.White, 3f, 0f, 0f, 0f, local: true)
+                    {
+                        delayBeforeAnimationStart = 400
+                    });
+
+                    gameInstance.temporarySprites.Add(new TemporaryAnimatedSprite("LooseSprites\\Cursors", new Rectangle(464, 1792, 16, 16), 120f, 5, 0, new Vector2(teleportSpot.X, teleportSpot.Y - TileSize / 2) + topLeftScreenCoordinate + new Vector2(TileSize / 2, TileSize / 2), flicker: false, flipped: false, 1f, 0f, Color.White, 3f, 0f, 0f, 0f, local: true)
+                    {
+                        delayBeforeAnimationStart = 600
+                    });
+                    gameInstance.temporarySprites.Add(new TemporaryAnimatedSprite("LooseSprites\\Cursors", new Rectangle(464, 1792, 16, 16), 120f, 5, 0, new Vector2(teleportSpot.X, teleportSpot.Y + TileSize / 2) + topLeftScreenCoordinate + new Vector2(TileSize / 2, TileSize / 2), flicker: false, flipped: false, 1f, 0f, Color.White, 3f, 0f, 0f, 0f, local: true)
+                    {
+                        delayBeforeAnimationStart = 800
+                    });
+
+                    if (tries < 10)
+                    {
+                        position = new Vector2(teleportSpot.X, teleportSpot.Y);
+
+                        //NET Player Move
+                        gameInstance.NETmovePlayer(position);
+
+                        SetInvincible(4000);
+                        Game1.playSound("cowboy_powerup");
+                    }
+                    break;
+
+                case POWERUP_TYPE.NUKE:
+                    if (!gameInstance.shootoutLevel)
+                    {
+                        foreach (Enemy e in gameInstance.monsters)
+                        {
+                            PK_EnemyKilled mEnemyKilled = new()
+                            {
+                                id = e.id
+                            };
+                            gameInstance.modInstance.Helper.Multiplayer.SendMessage(mEnemyKilled, "PK_EnemyKilled");
+                        }
+
+                        gameInstance.monsters.Clear();
+                    }
+                    else
+                    {
+                        foreach (Enemy c in gameInstance.monsters)
+                        {
+                            c.TakeDamage(30);
+                            gameInstance.NETspawnBullet(true, c.position.Center, 2, 1);
+                        }
+                    }
+                    break;
+
+                case POWERUP_TYPE.SPREAD:
+                case POWERUP_TYPE.RAPIDFIRE:
+                case POWERUP_TYPE.SHOTGUN:
+                    Game1.playSound("cowboy_gunload");
+                    gameInstance.activePowerups.Add(which, powerupDuration + 2000);
+                    break;
+
+                default:
+                    gameInstance.activePowerups.Add(which, powerupDuration);
+                    Game1.playSound("cowboy_powerup");
+                    break;
+            }
+
+            if (gameInstance.newGamePlus > 0 && gameInstance.activePowerups.ContainsKey(which))
+            {
+                gameInstance.activePowerups[which] /= 2;
+            }
+        }
+
+
+        public void ProcessInputs(Dictionary<GameKeys, int> _buttonHeldFrames)
         {
 			if (_buttonHeldFrames[GameKeys.MoveUp] > 0)
 			{
@@ -114,25 +279,25 @@ namespace MultiplayerPrairieKing.Entities
 			{
 				if (gameInstance.activePowerups.ContainsKey(POWERUP_TYPE.SPREAD))
 				{
-					gameInstance.SpawnBullets(new int[1], position);
-					gameInstance.SpawnBullets(new int[1] {1}, position);
-					gameInstance.SpawnBullets(new int[1] {2}, position);
-					gameInstance.SpawnBullets(new int[1] {3}, position);
-					gameInstance.SpawnBullets(new int[2] {0,1}, position);
-					gameInstance.SpawnBullets(new int[2] {1,2}, position);
-					gameInstance.SpawnBullets(new int[2] {2,3}, position);
-					gameInstance.SpawnBullets(new int[2] {3,0}, position);
+					SpawnBullets(new int[1], position);
+					SpawnBullets(new int[1] {1}, position);
+					SpawnBullets(new int[1] {2}, position);
+					SpawnBullets(new int[1] {3}, position);
+					SpawnBullets(new int[2] {0,1}, position);
+					SpawnBullets(new int[2] {1,2}, position);
+					SpawnBullets(new int[2] {2,3}, position);
+					SpawnBullets(new int[2] {3,0}, position);
 				}
 				else if (shootingDirections.Count == 1 || shootingDirections.Last() == (shootingDirections.ElementAt(shootingDirections.Count - 2) + 2) % 4)
 				{
-					gameInstance.SpawnBullets(new int[1]
+					SpawnBullets(new int[1]
 					{
 							(shootingDirections.Count == 2 && shootingDirections.Last() == (shootingDirections.ElementAt(shootingDirections.Count - 2) + 2) % 4) ? shootingDirections.ElementAt(1) : shootingDirections.ElementAt(0)
 					}, position);
 				}
 				else
 				{
-					gameInstance.SpawnBullets(shootingDirections.ToArray(), position);
+					SpawnBullets(shootingDirections.ToArray(), position);
 				}
 				Game1.playSound("Cowboy_gunshot");
 				shotTimer = shootingDelay;
@@ -159,7 +324,7 @@ namespace MultiplayerPrairieKing.Entities
 				{
 					effectiveDirections = 1;
 				}
-				float speed = GetMovementSpeed(3f, effectiveDirections);
+				float speed = GetMovementSpeed(playerSpeed, effectiveDirections);
 
 				//Run faster if COFFEE
 				if (gameInstance.activePowerups.Keys.Contains(POWERUP_TYPE.SPEED))
@@ -199,7 +364,7 @@ namespace MultiplayerPrairieKing.Entities
 						}
 						Rectangle newPlayerBox = new((int)newPlayerPosition.X + TileSize / 4, (int)newPlayerPosition.Y + TileSize / 4, TileSize / 2, TileSize / 2);
 						//Stop players from colliding
-						if (!gameInstance.IsCollidingWithMap(newPlayerBox) && (!gameInstance.merchantBox.Intersects(newPlayerBox) || gameInstance.merchantBox.Intersects(boundingBox)))
+						if (!gameInstance.map.IsCollidingWithMap(newPlayerBox) && (!gameInstance.merchantBox.Intersects(newPlayerBox) || gameInstance.merchantBox.Intersects(boundingBox)))
 						{
 							position = newPlayerPosition;
 						}
@@ -224,18 +389,20 @@ namespace MultiplayerPrairieKing.Entities
 
 					if (boundingBox.Intersects(powerupRect) && !boundingBox.Intersects(gameInstance.noPickUpBox))
 					{
-						//NET Pickup Powerup
-						PK_PowerupPickup message = new();
-						message.id = powerup.id;
-						message.which = (int)powerup.which;
-						gameInstance.modInstance.Helper.Multiplayer.SendMessage(message, "PK_PowerupPickup");
+                        //NET Pickup Powerup
+                        PK_PowerupPickup message = new()
+                        {
+                            id = powerup.id,
+                            which = (int)powerup.which
+                        };
+                        gameInstance.modInstance.Helper.Multiplayer.SendMessage(message, "PK_PowerupPickup");
 
-						if (gameInstance.heldItem != null)
+						if (heldItem != null)
 						{
-							gameInstance.UsePowerup(powerup.which);
+							UsePowerup(powerup.which);
 							gameInstance.powerups.RemoveAt(i);
 						}
-						else if (gameInstance.PickupPowerup(powerup))
+						else if (PickupPowerup(powerup))
 						{
 							gameInstance.powerups.RemoveAt(i);
 						}
@@ -259,6 +426,111 @@ namespace MultiplayerPrairieKing.Entities
 			gameInstance.NETmovePlayer(position);
 
 		}
+
+		public void SpawnBullets(int[] directions, Vector2 spawn)
+		{
+			Point bulletSpawn = new((int)spawn.X + 24, (int)spawn.Y + 24 - 6);
+			int speed = (int)GetMovementSpeed(8f, 2);
+			if (directions.Length == 1)
+			{
+				int playerShootingDirection = directions[0];
+				switch (playerShootingDirection)
+				{
+					case 0:
+						bulletSpawn.Y -= 22;
+						break;
+					case 1:
+						bulletSpawn.X += 16;
+						bulletSpawn.Y -= 6;
+						break;
+					case 2:
+						bulletSpawn.Y += 10;
+						break;
+					case 3:
+						bulletSpawn.X -= 16;
+						bulletSpawn.Y -= 6;
+						break;
+				}
+
+				gameInstance.NETspawnBullet(true, bulletSpawn, playerShootingDirection, bulletDamage);
+				if (gameInstance.activePowerups.ContainsKey(POWERUP_TYPE.SHOTGUN) || spreadPistol)
+				{
+					switch (playerShootingDirection)
+					{
+						case 0:
+							gameInstance.NETspawnBullet(true, new Point(bulletSpawn.X, bulletSpawn.Y), new Point(-2, -8), bulletDamage);
+							gameInstance.NETspawnBullet(true, new Point(bulletSpawn.X, bulletSpawn.Y), new Point(2, -8), bulletDamage);
+							break;
+						case 1:
+							gameInstance.NETspawnBullet(true, new Point(bulletSpawn.X, bulletSpawn.Y), new Point(8, -2), bulletDamage);
+							gameInstance.NETspawnBullet(true, new Point(bulletSpawn.X, bulletSpawn.Y), new Point(8, 2), bulletDamage);
+							break;
+						case 2:
+							gameInstance.NETspawnBullet(true, new Point(bulletSpawn.X, bulletSpawn.Y), new Point(-2, 8), bulletDamage);
+							gameInstance.NETspawnBullet(true, new Point(bulletSpawn.X, bulletSpawn.Y), new Point(2, 8), bulletDamage);
+							break;
+						case 3:
+							gameInstance.NETspawnBullet(true, new Point(bulletSpawn.X, bulletSpawn.Y), new Point(-8, -2), bulletDamage);
+							gameInstance.NETspawnBullet(true, new Point(bulletSpawn.X, bulletSpawn.Y), new Point(-8, 2), bulletDamage);
+							break;
+					}
+				}
+			}
+			else if (directions.Contains(0) && directions.Contains(1))
+			{
+				bulletSpawn.X += TileSize / 2;
+				bulletSpawn.Y -= TileSize / 2;
+				gameInstance.NETspawnBullet(true, bulletSpawn, new Point(speed, -speed), bulletDamage);
+				if (gameInstance.activePowerups.ContainsKey(POWERUP_TYPE.SHOTGUN) || spreadPistol)
+				{
+					int modifier8 = -2;
+					gameInstance.NETspawnBullet(true, bulletSpawn, new Point(speed + modifier8, -speed + modifier8), bulletDamage);
+					modifier8 = 2;
+					gameInstance.NETspawnBullet(true, bulletSpawn, new Point(speed + modifier8, -speed + modifier8), bulletDamage);
+				}
+			}
+			else if (directions.Contains(0) && directions.Contains(3))
+			{
+				bulletSpawn.X -= TileSize / 2;
+				bulletSpawn.Y -= TileSize / 2;
+				gameInstance.NETspawnBullet(true, bulletSpawn, new Point(-speed, -speed), bulletDamage);
+				if (gameInstance.activePowerups.ContainsKey(POWERUP_TYPE.SHOTGUN) || spreadPistol)
+				{
+					int modifier6 = -2;
+					gameInstance.NETspawnBullet(true, bulletSpawn, new Point(-speed - modifier6, -speed + modifier6), bulletDamage);
+					modifier6 = 2;
+					gameInstance.NETspawnBullet(true, bulletSpawn, new Point(-speed - modifier6, -speed + modifier6), bulletDamage);
+				}
+			}
+			else if (directions.Contains(2) && directions.Contains(1))
+			{
+				bulletSpawn.X += TileSize / 2;
+				bulletSpawn.Y += TileSize / 4;
+				gameInstance.NETspawnBullet(true, bulletSpawn, new Point(speed, speed), bulletDamage);
+				if (gameInstance.activePowerups.ContainsKey(POWERUP_TYPE.SHOTGUN) || spreadPistol)
+				{
+					int modifier4 = -2;
+					gameInstance.NETspawnBullet(true, bulletSpawn, new Point(speed - modifier4, speed + modifier4), bulletDamage);
+					modifier4 = 2;
+					gameInstance.NETspawnBullet(true, bulletSpawn, new Point(speed - modifier4, speed + modifier4), bulletDamage);
+				}
+			}
+			else if (directions.Contains(2) && directions.Contains(3))
+			{
+				bulletSpawn.X -= TileSize / 2;
+				bulletSpawn.Y += TileSize / 4;
+
+				gameInstance.NETspawnBullet(true, bulletSpawn, new Point(-speed, speed), bulletDamage);
+				if (gameInstance.activePowerups.ContainsKey(POWERUP_TYPE.SHOTGUN) || spreadPistol)
+				{
+					int modifier2 = -2;
+					gameInstance.NETspawnBullet(true, bulletSpawn, new Point(-speed + modifier2, speed + modifier2), bulletDamage);
+					modifier2 = 2;
+					gameInstance.NETspawnBullet(true, bulletSpawn, new Point(-speed + modifier2, speed + modifier2), bulletDamage);
+				}
+			}
+		}
+
 
 		public override void Die()
         {
