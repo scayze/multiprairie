@@ -4,7 +4,6 @@
     <TargetFramework>net5.0</TargetFramework>
 	<EnableHarmony>true</EnableHarmony>
 	<GamePath>I:\Games\SteamLibrary\steamapps\common\Stardew Valley</GamePath>
-	<GameModsPath>I:\Games\SteamLibrary\steamapps\common\Stardew Valley\ModsDEV</GameModsPath>
   </PropertyGroup>
 
   <ItemGroup>

@@ -10,9 +10,13 @@ using MultiplayerPrairieKing.Utility;
 using StardewModdingAPI;
 using StardewValley;
 using StardewValley.Minigames;
+using StardewValley.SDKs;
 using System;
 using System.Collections.Generic;
+using System.Formats.Asn1;
 using System.Linq;
+using System.Reflection;
+using System.Xml.Linq;
 using System.Xml.Serialization;
 
 namespace MultiPlayerPrairie
@@ -268,6 +272,8 @@ namespace MultiPlayerPrairie
 
 		public static int TileSize => 48;
 
+		public bool IsEnterButtonAssignmentFlipped;
+
         public GameMultiplayerPrairieKing(ModMultiPlayerPrairieKing mod, bool isHost)
         {
             ui = new(this);
@@ -282,6 +288,12 @@ namespace MultiPlayerPrairie
             this.modInstance = mod;
             this.isHost = isHost;
             Reset(false);
+
+			//Access SDKHelper by reflection. Hacky but otherwise controller controls are fucked
+            Type type = typeof(Program);
+            FieldInfo info = type.GetField("_sdk", BindingFlags.NonPublic | BindingFlags.Static);
+            SDKHelper sdkHelper = (SDKHelper)info.GetValue(null);
+            IsEnterButtonAssignmentFlipped = sdkHelper.IsEnterButtonAssignmentFlipped;
 
             /*
 			if (LoadGame())
@@ -673,7 +685,7 @@ namespace MultiPlayerPrairie
 					{
 						case Buttons.A:
 							if (gameOver) _buttonHeldState.Add(GameKeys.SelectOption); 
-							else if (true)_buttonHeldState.Add(GameKeys.ShootRight); //Program.sdk.IsEnterButtonAssignmentFlipped) //TODO: Figure this out 
+							else if (IsEnterButtonAssignmentFlipped) _buttonHeldState.Add(GameKeys.ShootRight);
                             else _buttonHeldState.Add(GameKeys.ShootDown);
 							break;
 						case Buttons.Y:
@@ -684,7 +696,7 @@ namespace MultiPlayerPrairie
 							break;
 						case Buttons.B:
 							if (gameOver) _buttonHeldState.Add(GameKeys.Exit);
-							else if (true) _buttonHeldState.Add(GameKeys.ShootDown); //Program.sdk.IsEnterButtonAssignmentFlipped) TODO: Figure this out
+							else if (IsEnterButtonAssignmentFlipped) _buttonHeldState.Add(GameKeys.ShootDown);
 							else _buttonHeldState.Add(GameKeys.ShootRight);
 							break;
 						case Buttons.DPadUp:
