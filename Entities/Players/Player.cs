@@ -13,7 +13,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using static MultiPlayerPrairie.GameMultiplayerPrairieKing;
-using static StardewValley.Polygon;
 
 namespace MultiplayerPrairieKing.Entities
 {
@@ -86,7 +85,7 @@ namespace MultiplayerPrairieKing.Entities
                 playerId = gameInstance.modInstance.playerID.Value,
                 type = (int)which
             };
-            gameInstance.modInstance.Helper.Multiplayer.SendMessage(mUsePowerup, "PK_UsePowerup");
+            gameInstance.modInstance.SyncMessage(mUsePowerup);
 
 
             if (gameInstance.activePowerups.ContainsKey(which))
@@ -110,7 +109,7 @@ namespace MultiplayerPrairieKing.Entities
 
                     Point teleportSpot = Point.Zero;
                     int tries = 0;
-                    while ((Math.Abs(teleportSpot.X - position.X) < 8f || Math.Abs(teleportSpot.Y - position.Y) < 8f || gameInstance.map.IsCollidingWithMap(teleportSpot) || gameInstance.map.IsCollidingWithMonster(new Rectangle(teleportSpot.X, teleportSpot.Y, TileSize, TileSize), null)) && tries < 10)
+                    while ((Math.Abs(teleportSpot.X - position.X) < 8f || Math.Abs(teleportSpot.Y - position.Y) < 8f || gameInstance.map.IsCollidingWithMap(teleportSpot) || gameInstance.map.IsCollidingWithMonster(new Rectangle(teleportSpot.X, teleportSpot.Y, TileSize, TileSize), gameInstance)) && tries < 10)
                     {
                         teleportSpot = new Point(Game1.random.Next(TileSize, 16 * TileSize - TileSize), Game1.random.Next(TileSize, 16 * TileSize - TileSize));
                         tries++;
@@ -157,7 +156,7 @@ namespace MultiplayerPrairieKing.Entities
                             {
                                 id = e.id
                             };
-                            gameInstance.modInstance.Helper.Multiplayer.SendMessage(mEnemyKilled, "PK_EnemyKilled");
+                            gameInstance.modInstance.SyncMessage(mEnemyKilled);
                         }
 
                         gameInstance.monsters.Clear();
@@ -395,7 +394,7 @@ namespace MultiplayerPrairieKing.Entities
                             id = powerup.id,
                             which = (int)powerup.which
                         };
-                        gameInstance.modInstance.Helper.Multiplayer.SendMessage(message, "PK_PowerupPickup");
+                        gameInstance.modInstance.SyncMessage(message);
 
 						if (heldItem != null)
 						{

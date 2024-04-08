@@ -18,7 +18,7 @@ namespace MultiplayerPrairieKing.Components
 
         public bool onStartMenu;
 
-        int currentGameOverOption;
+        public int currentGameOverOption;
 
         public UI(GameMultiplayerPrairieKing gameInstance)
         {
@@ -56,7 +56,7 @@ namespace MultiplayerPrairieKing.Components
                     gameInstance.InstantiatePlayers();
                     Game1.playSound("Pickup_Coin15");
                     PK_StartNewGame mNewGame = new();
-                    gameInstance.modInstance.Helper.Multiplayer.SendMessage(mNewGame, "PK_StartNewGame");
+                    gameInstance.modInstance.SyncMessage(mNewGame);
                 }
             }
 
@@ -86,10 +86,16 @@ namespace MultiplayerPrairieKing.Components
                 }
                 else
                 {
-                    gameInstance.gamerestartTimer = 1500;
-                    gameInstance.gameOver = false;
-                    currentGameOverOption = 0;
-                    Game1.playSound("Pickup_Coin15");
+                    if(gameInstance.isHost)
+                    {
+                        gameInstance.gamerestartTimer = 1500;
+                        gameInstance.gameOver = false;
+                        currentGameOverOption = 0;
+                        Game1.playSound("Pickup_Coin15");
+
+                        PK_RestartGame message = new();
+                        gameInstance.modInstance.SyncMessage(message);
+                    }
                 }
             }
         }

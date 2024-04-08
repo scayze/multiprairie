@@ -241,7 +241,7 @@ namespace MultiplayerPrairieKing.Entities.Enemies
 						}
 						attemptedPosition.X = position.X - (attemptedPosition.X - position.X);
 						attemptedPosition.Y = position.Y - (attemptedPosition.Y - position.Y);
-						if (!gameInstance.map.IsCollidingWithMapForMonsters(attemptedPosition) && !gameInstance.map.IsCollidingWithMonster(attemptedPosition, this))
+						if (!gameInstance.map.IsCollidingWithMapForMonsters(attemptedPosition) && !gameInstance.map.IsCollidingWithMonster(attemptedPosition, this, gameInstance))
 						{
 							position = attemptedPosition;
 						}
@@ -420,19 +420,19 @@ namespace MultiplayerPrairieKing.Entities.Enemies
 		{
 			if (gameInstance.isHost)
 			{
-				if (!gameInstance.map.IsCollidingWithMonster(new Rectangle(origin.X - TileSize - TileSize / 2, origin.Y, TileSize, TileSize), null))
+				if (!gameInstance.map.IsCollidingWithMonster(new Rectangle(origin.X - TileSize - TileSize / 2, origin.Y, TileSize, TileSize), gameInstance))
 				{
 					gameInstance.monsters.Add(new Enemy(gameInstance, which, new Point(origin.X - TileSize - TileSize / 2, origin.Y)));
 				}
-				if (!gameInstance.map.IsCollidingWithMonster(new Rectangle(origin.X + TileSize + TileSize / 2, origin.Y, TileSize, TileSize), null))
+				if (!gameInstance.map.IsCollidingWithMonster(new Rectangle(origin.X + TileSize + TileSize / 2, origin.Y, TileSize, TileSize), gameInstance))
 				{
 					gameInstance.monsters.Add(new Enemy(gameInstance, which, new Point(origin.X + TileSize + TileSize / 2, origin.Y)));
 				}
-				if (!gameInstance.map.IsCollidingWithMonster(new Rectangle(origin.X, origin.Y + TileSize + TileSize / 2, TileSize, TileSize), null))
+				if (!gameInstance.map.IsCollidingWithMonster(new Rectangle(origin.X, origin.Y + TileSize + TileSize / 2, TileSize, TileSize), gameInstance))
 				{
 					gameInstance.monsters.Add(new Enemy(gameInstance, which, new Point(origin.X, origin.Y + TileSize + TileSize / 2)));
 				}
-				if (!gameInstance.map.IsCollidingWithMonster(new Rectangle(origin.X, origin.Y - TileSize - TileSize * 3 / 4, TileSize, TileSize), null))
+				if (!gameInstance.map.IsCollidingWithMonster(new Rectangle(origin.X, origin.Y - TileSize - TileSize * 3 / 4, TileSize, TileSize), gameInstance))
 				{
 					gameInstance.monsters.Add(new Enemy(gameInstance, which, new Point(origin.X, origin.Y - TileSize - TileSize * 3 / 4)));
 				}

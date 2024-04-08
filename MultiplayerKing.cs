@@ -13,6 +13,7 @@ using BasePlayer = MultiplayerPrairieKing.Entities.BasePlayer;
 using MultiplayerPrairieKing;
 using MultiplayerPrairieKing.Components;
 using MultiplayerPrairieKing.Utility;
+using StardewValley.Locations;
 
 namespace MultiPlayerPrairie
 {
@@ -69,7 +70,7 @@ namespace MultiPlayerPrairie
                         {
                             playerId = instance.playerID.Value
                         };
-                        instance.Helper.Multiplayer.SendMessage(mJoinLobby, "PK_JoinLobby");
+                        instance.SyncMessage(mJoinLobby);
 
                         //Start Game
                         Game1.player.jotpkProgress.Value = null;
@@ -85,7 +86,7 @@ namespace MultiPlayerPrairie
 
                         //NET Start Hosting
                         PK_StartHosting mStartHosting = new();
-                        instance.Helper.Multiplayer.SendMessage(mStartHosting, "PK_StartHosting");
+                        instance.SyncMessage(mStartHosting);
 
                         Game1.player.jotpkProgress.Value = null;
                         Game1.currentMinigame = new GameMultiplayerPrairieKing(ModMultiPlayerPrairieKing.instance, ModMultiPlayerPrairieKing.instance.isHost.Value);
@@ -116,11 +117,6 @@ namespace MultiPlayerPrairie
         public override void Entry(IModHelper helper)
         {
             instance = this;
-
-            //Generate random long because apparently multiplayer helper aint ready yet?
-
-            //playerID = Helper.Multiplayer.GetNewID();
-
             Config = Helper.ReadConfig<ModConfig>();
 
             //Load custom texture for players
@@ -149,6 +145,11 @@ namespace MultiPlayerPrairie
             helper.ConsoleCommands.Add("pk_GoCrazy", "We ballin.", this.GoCrazy);
         }
 
+        public void SyncMessage(object data)
+        {
+            Helper.Multiplayer.SendMessage(data, data.GetType().Name, new string[] { ModManifest.UniqueID }); //, playerList.ToArray());
+        }
+
         private void UsePowerup(string command, string[] args)
         {
             GameMultiplayerPrairieKing PK_game = (GameMultiplayerPrairieKing)Game1.currentMinigame;
@@ -173,7 +174,18 @@ namespace MultiPlayerPrairie
         private void SkipToStage(string command, string[] args)
         {
             GameMultiplayerPrairieKing PK_game = (GameMultiplayerPrairieKing)Game1.currentMinigame;
-            PK_game.NETskipLevel(int.Parse(args[0]));
+
+            int targetLevel;
+
+            bool success = int.TryParse(args[0], out targetLevel);
+
+            if(!success)
+            {
+                Monitor.Log("Incorrect arguement");
+                return;
+            }
+
+            PK_game.NETskipLevel(targetLevel);
         }
 
 
@@ -204,7 +216,7 @@ namespace MultiPlayerPrairie
                     instance.isHostAvailable = false;
                     //NET Stop Hosting
                     PK_StopHosting mStopHosting = new();
-                    instance.Helper.Multiplayer.SendMessage(mStopHosting, "PK_StopHosting");
+                    instance.SyncMessage(mStopHosting);
                     instance.isHost.Value = false;
                     break;
             }
@@ -265,13 +277,14 @@ namespace MultiPlayerPrairie
                         else difficulty = DIFFICULTY.NORMAL;
 
                         mLobbyInfoMessage.difficulty = (int)difficulty;
-                        Helper.Multiplayer.SendMessage(mLobbyInfoMessage, "PK_LobbyInfo");
+                        SyncMessage(mLobbyInfoMessage);
 
                         if (Game1.currentMinigame is GameMultiplayerPrairieKing PK_Game)
                         {
                             PK_Game.difficulty = (DIFFICULTY)mLobbyInfoMessage.difficulty;
                         }
 
+                        Game1.playSound("Pickup_Coin15");
                         break;
                     }
 
@@ -285,6 +298,8 @@ namespace MultiPlayerPrairie
                         {
                             PK_Game.difficulty = (DIFFICULTY)mLobbyInfo.difficulty;
                         }
+
+                        Game1.playSound("Pickup_Coin15");
                         break;
                     }
             }
@@ -309,8 +324,6 @@ namespace MultiPlayerPrairie
                         id = mPowerupSpawn.id
                     };
                     PK_game.powerups.Add(powerupSpawn);
-
-                    Monitor.Log(e.Type + " event, spawning " + powerupType.ToString() + " with id " +powerupSpawn.id, LogLevel.Debug);
                     break;
 
                 case "PK_PowerupPickup":
@@ -484,6 +497,13 @@ namespace MultiPlayerPrairie
                     Game1.playSound("Pickup_Coin15");
                     break;
 
+                case "PK_RestartGame":
+                    PK_game.gamerestartTimer = 1500;
+                    PK_game.gameOver = false;
+                    PK_game.ui.currentGameOverOption = 0;
+                    Game1.playSound("Pickup_Coin15");
+                    break;
+
                 case "PK_EnemyKilled":
                     PK_EnemyKilled mEnemyKilled = e.ReadAs<PK_EnemyKilled>();
 
@@ -497,8 +517,6 @@ namespace MultiPlayerPrairie
                             PK_game.monsters.RemoveAt(i);
                             PK_game.AddGuts(m.position.Location, m.type);
                             Game1.playSound("Cowboy_monsterDie");
-
-                            Monitor.Log("Monser killed by event: " + m.id, LogLevel.Debug);
                         }
                     }
                     break;

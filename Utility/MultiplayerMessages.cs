@@ -121,6 +121,11 @@ namespace MultiplayerPrairieKing.Utility
 
     }
 
+    public class PK_RestartGame
+    {
+
+    }
+
     //Basic Lobby messages
     public class PK_StartHosting
     {

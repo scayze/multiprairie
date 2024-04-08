@@ -93,7 +93,7 @@ namespace MultiplayerPrairieKing.Components
                             {
                                 gameInstance.StartNewRound();
                                 PK_StartNewGamePlus message = new();
-                                gameInstance.modInstance.Helper.Multiplayer.SendMessage(message, "PK_StartNewGamePlus");
+                                gameInstance.modInstance.SyncMessage(message);
                             }
 
                         }
