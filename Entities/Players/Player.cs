@@ -1,14 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Audio;
-using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Media;
 using MultiPlayerPrairie;
-using MultiplayerPrairieKing.Components;
 using MultiplayerPrairieKing.Utility;
-using StardewModdingAPI;
 using StardewValley;
-using StardewValley.Monsters;
-using StardewValley.Tools;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,18 +10,12 @@ using static MultiPlayerPrairie.GameMultiplayerPrairieKing;
 namespace MultiplayerPrairieKing.Entities
 {
     public class Player : BasePlayer
-	{
-		public int runSpeedLevel;
-		public int fireSpeedLevel;
-		public int ammoLevel;
-		public int bulletDamage = 1;
-		public bool spreadPistol;
-        
+	{  
         int shotTimer;
 		const int shootingDelay = 300;
         const int powerupDuration = 10000;
         public const float playerSpeed = 3f;
-        public Powerup heldItem;
+
         public Player(GameMultiplayerPrairieKing game) : base(game)
         {
 			ammoLevel = 0;
@@ -36,7 +23,7 @@ namespace MultiplayerPrairieKing.Entities
 
         public bool PickupPowerup(Powerup c)
         {
-            switch (c.which)
+            switch (c.type)
             {
                 case POWERUP_TYPE.HEART:
                     UsePowerup(POWERUP_TYPE.HEART);
@@ -287,11 +274,11 @@ namespace MultiplayerPrairieKing.Entities
 					SpawnBullets(new int[2] {2,3}, position);
 					SpawnBullets(new int[2] {3,0}, position);
 				}
-				else if (shootingDirections.Count == 1 || shootingDirections.Last() == (shootingDirections.ElementAt(shootingDirections.Count - 2) + 2) % 4)
+				else if (shootingDirections.Count == 1 || shootingDirections.Last() == (shootingDirections[shootingDirections.Count - 2] + 2) % 4)
 				{
 					SpawnBullets(new int[1]
 					{
-							(shootingDirections.Count == 2 && shootingDirections.Last() == (shootingDirections.ElementAt(shootingDirections.Count - 2) + 2) % 4) ? shootingDirections.ElementAt(1) : shootingDirections.ElementAt(0)
+							(shootingDirections.Count == 2 && shootingDirections.Last() == (shootingDirections[shootingDirections.Count - 2] + 2) % 4) ? shootingDirections[1] : shootingDirections[0]
 					}, position);
 				}
 				else
@@ -343,10 +330,10 @@ namespace MultiplayerPrairieKing.Entities
 
 				for (int i = Math.Max(0, movementDirections.Count - 2); i < movementDirections.Count; i++)
 				{
-					if (i != 0 || movementDirections.Count < 2 || movementDirections.Last() != (movementDirections.ElementAt(movementDirections.Count - 2) + 2) % 4)
+					if (i != 0 || movementDirections.Count < 2 || movementDirections.Last() != (movementDirections[movementDirections.Count - 2] + 2) % 4)
 					{
 						Vector2 newPlayerPosition = position;
-						switch (movementDirections.ElementAt(i))
+						switch (movementDirections[i])
 						{
 							case 0:
 								newPlayerPosition.Y -= speed;
@@ -392,13 +379,13 @@ namespace MultiplayerPrairieKing.Entities
                         PK_PowerupPickup message = new()
                         {
                             id = powerup.id,
-                            which = (int)powerup.which
+                            which = (int)powerup.type
                         };
                         gameInstance.modInstance.SyncMessage(message);
 
 						if (heldItem != null)
 						{
-							UsePowerup(powerup.which);
+							UsePowerup(powerup.type);
 							gameInstance.powerups.RemoveAt(i);
 						}
 						else if (PickupPowerup(powerup))

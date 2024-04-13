@@ -6,47 +6,50 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static MultiplayerPrairieKing.Utility.Serialization;
 
 namespace MultiplayerPrairieKing.Utility
 {
 
-    class PlayerSaveState
+    public class PlayerSaveState
     {
-        public int bulletDamage = 0;
+        public long PlayerID { get; set; }
 
-        public int fireSpeedLevel = 0;
+        public string PlayerName { get; set; }
 
-        public int ammoLevel = 0;
+        public int BulletDamage { get; set; }
 
-        public int spreadPistol = 0;
+        public int FireSpeedLevel { get; set; }
 
-        public int runSpeedLevel = 0;
+        public int AmmoLevel { get; set; }
 
-        public int heldItem = -100;
+        public bool SpreadPistol { get; set; }
+
+        public int RunSpeedLevel { get; set; }
+
+        public int HeldItem { get; set; }
     }
 
-    internal class SaveState
+    public class SaveState
     {
-        List<PlayerSaveState> playerSaveStates = new();
+        public List<PlayerSaveState> playerSaveStates { get; set; }
 
-        public int lives = 0;
+        public int Lives { get; set; }
 
-        public int coins = 0;
+        public int Coins { get; set; }
 
-        public int score = 0;
+        public int Score { get; set; }
 
-        public bool died = false;
+        public bool Died { get; set; }
 
-        public int whichRound = 0;
+        public int WhichRound { get; set; }
 
-        public int whichWave = 0;
+        public int WhichWave { get; set; }
 
-        public int world = 0;
+        public int World { get; set; }
 
-        public int waveTimer = 0;
+        public int WaveTimer { get; set; }
 
-        public List<Vector2> monsterChances = new();
-
-
+        public List<SVector2> MonsterChances { get; set; }
     }
 }

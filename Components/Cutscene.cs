@@ -89,7 +89,7 @@ namespace MultiplayerPrairieKing.Components
                         }
                         if (gameInstance.gamerestartTimer <= 0)
                         {
-                            if (gameInstance.isHost)
+                            if (gameInstance.IsHost)
                             {
                                 gameInstance.StartNewRound();
                                 PK_StartNewGamePlus message = new();

@@ -8,6 +8,7 @@ namespace MultiplayerPrairieKing.Entities
 {
     public class PlayerSlave : BasePlayer
     {
+
         public PlayerSlave(GameMultiplayerPrairieKing game) : base(game)
         {
 			

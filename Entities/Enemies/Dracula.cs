@@ -87,7 +87,7 @@ namespace MultiplayerPrairieKing.Entities.Enemies
 			Game1.playSound("cowboy_explosion");
 
 			//Spawn heart on defeat
-			if (gameInstance.isHost)
+			if (gameInstance.IsHost)
 			{
 				gameInstance.NETspawnPowerup(POWERUP_TYPE.HEART, new Point(8 * TileSize, 10 * TileSize), 9999999);
 			}
@@ -161,11 +161,7 @@ namespace MultiplayerPrairieKing.Entities.Enemies
 					if (phaseInternalTimer <= 0)
 					{
 						phaseInternalCounter = 0;
-						if (Game1.soundBank != null)
-						{
-							outlawSong = Game1.soundBank.GetCue("cowboy_boss");
-							outlawSong.Play();
-						}
+                        Game1.playSound("cowboy_boss", out outlawSong);
 						phase = 0;
 					}
 					break;
@@ -253,7 +249,7 @@ namespace MultiplayerPrairieKing.Entities.Enemies
 							{
 								trajectory = StardewValley.Utility.getTranslatedVector2(trajectory, gameInstance.player.movementDirections.Last(), 3f);
 							}
-							if (gameInstance.isHost) gameInstance.NETspawnBullet(false, new Point(position.X + TileSize / 2, position.Y + TileSize / 2), new Point((int)trajectory.X, (int)trajectory.Y), 1);
+							if (gameInstance.IsHost) gameInstance.NETspawnBullet(false, new Point(position.X + TileSize / 2, position.Y + TileSize / 2), new Point((int)trajectory.X, (int)trajectory.Y), 1);
 							shootTimer = 250;
 							Game1.playSound("Cowboy_gunshot");
 						}
@@ -358,7 +354,7 @@ namespace MultiplayerPrairieKing.Entities.Enemies
 							shootTimer = 200;
 							phaseInternalCounter++;
                             Vector2 trajectory3 = StardewValley.Utility.getVelocityTowardPoint(new Point(position.X + TileSize / 2, position.Y), playerPosition + new Vector2(TileSize / 2, TileSize / 2), 8f);
-							if (gameInstance.isHost) gameInstance.NETspawnBullet(false, new Point(position.X + TileSize / 2, position.Y + TileSize / 2), new Point((int)trajectory3.X, (int)trajectory3.Y), 1);
+							if (gameInstance.IsHost) gameInstance.NETspawnBullet(false, new Point(position.X + TileSize / 2, position.Y + TileSize / 2), new Point((int)trajectory3.X, (int)trajectory3.Y), 1);
 							Game1.playSound("Cowboy_gunshot");
 						}
 					}
@@ -374,7 +370,7 @@ namespace MultiplayerPrairieKing.Entities.Enemies
                             Vector2 trajectory2 = StardewValley.Utility.getVelocityTowardPoint(new Point(position.X + TileSize / 2, position.Y), playerPosition + new Vector2(TileSize / 2, TileSize / 2), 8f);
 							trajectory2.X += Game1.random.Next(-1, 2);
 							trajectory2.Y += Game1.random.Next(-1, 2);
-							if (gameInstance.isHost) gameInstance.NETspawnBullet(false, new Point(position.X + TileSize / 2, position.Y + TileSize / 2), new Point((int)trajectory2.X, (int)trajectory2.Y), 1);
+							if (gameInstance.IsHost) gameInstance.NETspawnBullet(false, new Point(position.X + TileSize / 2, position.Y + TileSize / 2), new Point((int)trajectory2.X, (int)trajectory2.Y), 1);
 							Game1.playSound("Cowboy_gunshot");
 							shootTimer = 200;
 						}
@@ -411,14 +407,14 @@ namespace MultiplayerPrairieKing.Entities.Enemies
 					trajectory.Y = (float)(Math.Sin(offsetAngle) * (p.X - origin.X) + Math.Cos(offsetAngle) * (p.Y - origin.Y) + origin.Y);
 					trajectory = StardewValley.Utility.getVelocityTowardPoint(origin, trajectory, 8f);
 				}
-				if (gameInstance.isHost) gameInstance.NETspawnBullet(false, origin, new Point((int)trajectory.X, (int)trajectory.Y), 1);
+				if (gameInstance.IsHost) gameInstance.NETspawnBullet(false, origin, new Point((int)trajectory.X, (int)trajectory.Y), 1);
 			}
 			Game1.playSound("Cowboy_gunshot");
 		}
 
 		public void SummonEnemies(Point origin, MONSTER_TYPE which)
 		{
-			if (gameInstance.isHost)
+			if (gameInstance.IsHost)
 			{
 				if (!gameInstance.map.IsCollidingWithMonster(new Rectangle(origin.X - TileSize - TileSize / 2, origin.Y, TileSize, TileSize), gameInstance))
 				{
